@@ -6,7 +6,7 @@ use std::fmt::Display;
 // need to use it. Their content can be moved to a file. We can also
 // introduce a standardized template for this design.
 
-// TODO: include some sort of logging statement
+// TODO: replace calls to this with some sort of logging statement
 pub fn impossible<T: Display>(t: T) -> Response<Body> {
     Response::builder()
         .status(500)
