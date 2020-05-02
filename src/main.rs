@@ -10,7 +10,7 @@ use app::AppState;
 pub async fn main() {
     let app_state = Arc::new(AppState::new());
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-
+    
     tokio::join!(
         app_state.increment_count(),
         async {

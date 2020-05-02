@@ -1,7 +1,6 @@
+use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
-
 use serde::Deserialize;
-
 use tokio::time::{Duration, interval};
 
 use std::net::SocketAddr;
@@ -10,6 +9,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use crate::hyper_boilerplate::Respond;
 
 mod responses;
+
+fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
+    if s.starts_with(prefix) {
+        Some(&s[prefix.as_bytes().len()..])
+    } else {
+        None
+    }
+}
 
 pub struct AppState {
     count: AtomicU64,
@@ -30,8 +37,9 @@ impl AppState {
     }
 }
 
+#[async_trait]
 impl Respond for AppState {
-    fn respond(&self, _: SocketAddr, req: Request<Body>) -> Response<Body> {
+    async fn respond(&self, _: SocketAddr, req: Request<Body>) -> Response<Body> {
         // Return an error if we somehow get a URI that doesn't have a path.
         let uri = req.uri().clone().into_parts();
         let path_and_query = match uri.path_and_query {
@@ -49,15 +57,11 @@ impl Respond for AppState {
                 .map(|q| q.i));
 
         if req.method() == Method::GET {
-            match path.as_str() {
-                "count" => {
-                    let count = self.count.load(Ordering::Relaxed);
-                    Response::new(Body::from(format!("{}", count)))
-                }
-                "panic" => panic!(),
-                _ => {
-                    responses::not_found()
-                }
+            if let Some(path) = strip_prefix(&path, "static/") {
+                let path = format!("static/public/{}", path);
+                responses::file(&path).await
+            } else {
+                responses::not_found()
             }
         } else {
             responses::not_found()
