@@ -39,7 +39,11 @@ impl AppState {
         let mut interval = interval(Duration::from_secs(1));
         loop {
             interval.tick().await;
-            self.count.fetch_add(1, Ordering::Relaxed);
+            let prev_val = self.count.fetch_add(1, Ordering::Relaxed);
+            if prev_val % 4 == 0 {
+                println!("Reloaded templates ({})", prev_val);
+                self.reload_templates();
+            }
         }
     }
 
