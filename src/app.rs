@@ -1,4 +1,4 @@
-use hyper::{Request, Response, Body};
+use hyper::{Request, Response, Body, Method};
 
 use serde::Deserialize;
 
@@ -48,15 +48,19 @@ impl Respond for AppState {
                 .ok()
                 .map(|q| q.i));
 
-        let count = self.count.load(Ordering::Relaxed);
-        let content = format!(
-            "Path:  {}\n\
-             Param: {}\n\
-             Count: {}",
-             path,
-             query_param.unwrap_or_else(|| String::from("none")),
-             count,
-        );
-        Response::new(Body::from(content))
+        if req.method() == Method::GET {
+            match path.as_str() {
+                "count" => {
+                    let count = self.count.load(Ordering::Relaxed);
+                    Response::new(Body::from(format!("{}", count)))
+                }
+                "panic" => panic!(),
+                _ => {
+                    responses::not_found()
+                }
+            }
+        } else {
+            responses::not_found()
+        }
     }
 }
