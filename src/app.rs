@@ -1,14 +1,18 @@
 use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
 use serde::Deserialize;
+use tera::Tera;
 use tokio::time::{Duration, interval};
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
+// TODO: with some performance testing, maybe switch to parking_lot?
+use std::sync::RwLock;
 
 use crate::hyper_boilerplate::Respond;
 
 mod responses;
+mod templates;
 
 fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
     if s.starts_with(prefix) {
@@ -20,20 +24,51 @@ fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
 
 pub struct AppState {
     count: AtomicU64,
+    templates: RwLock<Tera>,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
             count: AtomicU64::new(0),
+            templates: RwLock::new(templates::load()),
         }
     }
+
     pub async fn increment_count(&self) {
         let mut interval = interval(Duration::from_secs(1));
         loop {
             interval.tick().await;
             self.count.fetch_add(1, Ordering::Relaxed);
         }
+    }
+
+    pub fn render(&self, name: &str, ctx: &tera::Context) -> Response<Body> {
+        let templates = match self.templates.read() {
+            Ok(templates) => templates,
+            Err(_) => return responses::impossible("cant get templates"),
+        };
+        match templates.render(name, ctx) {
+            Ok(body) => {
+                let mime = mime_guess::from_path(name).first_or_octet_stream();
+                Response::builder()
+                    .status(200)
+                    .header("Content-Type", &format!("{}", mime))
+                    .body(Body::from(body))
+                    .unwrap()
+            }
+            Err(e) => match e.kind {
+                tera::ErrorKind::TemplateNotFound(_) => responses::not_found(),
+                _ => responses::impossible(format!("{:?}", e)),
+            }
+        }
+    }
+
+    pub fn reload_templates(&self) {
+        use std::sync::PoisonError;
+        let mut template_lock = self.templates.write()
+            .unwrap_or_else(PoisonError::into_inner);
+        *template_lock = templates::load();
     }
 }
 
@@ -61,7 +96,11 @@ impl Respond for AppState {
                 let path = format!("static/public/{}", path);
                 responses::file(&path).await
             } else {
-                responses::not_found()
+                use tera::Context;
+                match path.as_str() {
+                    "about" => self.render("about.html", &Context::new()),
+                    _ => responses::not_found(),
+                }
             }
         } else {
             responses::not_found()

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Nokevair - About</title>
+    </head>
+    <body>
+        This is the about page for Nokevair.
+        <br />
+        Calculation: {{ 1 + 1 }}
+    </body>
+</html>
