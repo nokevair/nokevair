@@ -510,6 +510,7 @@ dependencies = [
  "hyper",
  "hyper-staticfile",
  "mime_guess",
+ "rmpv",
  "serde",
  "serde_urlencoded",
  "tera",
@@ -669,6 +670,26 @@ name = "regex-syntax"
 version = "0.6.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fe5bd57d1d7414c6b5ed48563a2c855d995ff777729dcd91c369ec7fea395ae"
+
+[[package]]
+name = "rmp"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f10b46df14cf1ee1ac7baa4d2fbc2c52c0622a4b82fa8740e37bc452ac0184f"
+dependencies = [
+ "byteorder",
+ "num-traits",
+]
+
+[[package]]
+name = "rmpv"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8e5078dd8691b0811b14fbd2d78358f7fc68e83b98ba6f16488bf77694e9fe2"
+dependencies = [
+ "num-traits",
+ "rmp",
+]
 
 [[package]]
 name = "ryu"

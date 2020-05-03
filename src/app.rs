@@ -12,6 +12,7 @@ use std::sync::RwLock;
 use crate::hyper_boilerplate::Respond;
 
 mod responses;
+mod state;
 mod templates;
 
 fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
@@ -25,6 +26,7 @@ fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
 pub struct AppState {
     count: AtomicU64,
     templates: RwLock<Tera>,
+    state: rmpv::Value,
 }
 
 impl AppState {
@@ -32,6 +34,10 @@ impl AppState {
         Self {
             count: AtomicU64::new(0),
             templates: RwLock::new(templates::load()),
+            state: match state::latest_idx() {
+                Some(n) => state::load(n),
+                None => state::new(),
+            }
         }
     }
 
@@ -40,8 +46,9 @@ impl AppState {
         loop {
             interval.tick().await;
             let prev_val = self.count.fetch_add(1, Ordering::Relaxed);
+            // TODO: rather than doing this at regular intervals, have it be triggered
+            // by an authenticated POST request from the admin console.
             if prev_val % 4 == 0 {
-                println!("Reloaded templates ({})", prev_val);
                 self.reload_templates();
             }
         }
@@ -103,6 +110,11 @@ impl Respond for AppState {
                 use tera::Context;
                 match path.as_str() {
                     "about" => self.render("about.html", &Context::new()),
+                    "state" => {
+                        let mut context = Context::new();
+                        context.insert("state", &format!("{}", self.state));
+                        self.render("state.html", &context)
+                    },
                     _ => responses::not_found(),
                 }
             }
