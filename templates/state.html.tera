@@ -1,6 +1,10 @@
 {%- extends "base.html" -%}
-{%- block title -%}State{%- endblock title -%}
-{%- block content -%}
-<h1>State</h1>
-<pre>{{ state }}</pre>
+
+{%- block title -%}
+    State
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>State</h1>
+    <pre>{{ state }}</pre>
 {%- endblock content -%}

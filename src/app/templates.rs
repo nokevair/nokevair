@@ -6,5 +6,6 @@ pub fn load() -> Tera {
     tera.add_template_file("templates/base.html.tera", Some("base.html")).unwrap();
     tera.add_template_file("templates/about.html.tera", Some("about.html")).unwrap();
     tera.add_template_file("templates/state.html.tera", Some("state.html")).unwrap();
+    tera.add_template_file("templates/login.html.tera", Some("login.html")).unwrap();
     tera
 }

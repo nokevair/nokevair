@@ -4,20 +4,31 @@
         <meta charset="utf-8" />
         <title>{% block title %}Base{% endblock title %} | Nokevair</title>
         <link type="text/css" rel="stylesheet" href="/static/main.css" />
+{%- block css %}{% endblock css %}
     </head>
     <body>
-        <nav>
-            <ul>
-                <li id="logo"><a href="/">Nokevair</a></div>
-                <li><a href="/about">About</a></li>
-                <li><a href="/blog">Blog</a></li>
-                <li><a href="/state">State</a></li>
-            </ul>
-        </nav>
-        <div id="body">
+        <div id="container">
+            <nav>
+                <ul>
+                    <li id="logo"><a href="/">Nokevair</a></li>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/blog">Blog</a></li>
+                    <li><a href="/state">State</a></li>
+                </ul>
+            </nav>
+            <div id="body">
 {%- block content %}
 No content.
 {% endblock content %}
+            </div>
+        </div>
+        <div id="footer">
+            <p>&copy; 2020 Nokevair developers.</p>
+            <p>Email link.</p>
+            <p>GitHub link.</p>
+            <p>Reddit link.</p>
+            <p>Are you an admin? <a href="/login">Log in here.</a></p>
+{%- block js %}{% endblock js %}
         </div>
     </body>
 </html>

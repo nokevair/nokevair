@@ -21,6 +21,28 @@ pub fn not_found() -> Response<Body> {
         .unwrap()
 }
 
+pub fn unauthorized() -> Response<Body> {
+    Response::builder()
+        .status(401)
+        .body(Body::from("401 unauthorized"))
+        .unwrap()
+}
+
+pub fn bad_request() -> Response<Body> {
+    Response::builder()
+        .status(400)
+        .body(Body::from("400 bad request"))
+        .unwrap()
+}
+
+pub fn redirect(uri: &str) -> Response<Body> {
+    Response::builder()
+        .status(303)
+        .header("Location", uri)
+        .body(Body::empty())
+        .unwrap()
+}
+
 pub async fn file(path: &str) -> Response<Body> {
     use tokio::fs::File;
     use hyper_staticfile::FileBytesStream;
