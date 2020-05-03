@@ -1,21 +1,6 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="utf-8" />
-        <title>Nokevair - About</title>
-        <link type="text/css" rel="stylesheet" href="/static/main.css" />
-    </head>
-    <body>
-        <nav>
-            <ul>
-                <li id="logo"><a href="/">Nokevair</a></div>
-                <li><a href="/about">About</a></li>
-                <li><a href="/blog">Blog</a></li>
-            </ul>
-        </nav>
-        <div id="body">
-            <h1>About</h1>
-            <p>This page is currently unfinished.</p>
-        </div>
-    </body>
-</html>
+{% extends "base.html" -%}
+{% block title %}About{% endblock title %}
+{%- block content %}
+<h1>About</h1>
+<p>This page is currently unfinished.</p>
+{%- endblock content -%}

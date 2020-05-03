@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>{% block title %}Base{% endblock title %} - Nokevair</title>
+        <link type="text/css" rel="stylesheet" href="/static/main.css" />
+    </head>
+    <body>
+        <nav>
+            <ul>
+                <li id="logo"><a href="/">Nokevair</a></div>
+                <li><a href="/about">About</a></li>
+                <li><a href="/blog">Blog</a></li>
+            </ul>
+        </nav>
+        <div id="body">
+{%- block content %}
+No content.
+{%- endblock content %}
+        </div>
+    </body>
+</html>
