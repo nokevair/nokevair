@@ -44,7 +44,7 @@ impl super::AppState {
             }
             Err(e) => match e.kind {
                 tera::ErrorKind::TemplateNotFound(_) => self.error_404(),
-                _ => self.error_500(format!("while rendering template: {:?}", e)),
+                _ => self.error_500(format_args!("while rendering template: {:?}", e)),
             }
         }
     }
