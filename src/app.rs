@@ -11,7 +11,7 @@ use tokio::time::{Duration, Instant, interval};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 // TODO: with some performance testing, maybe switch to parking_lot?
-use std::sync::{RwLock, PoisonError};
+use std::sync::RwLock;
 
 use crate::hyper_boilerplate::Respond;
 use crate::utils;
@@ -64,36 +64,6 @@ impl AppState {
                 self.clear_login_tokens();
             }
         }
-    }
-
-    /// Render a Tera template with the provided context.
-    /// TODO: `error_*()` functions will eventually attempt to call this function,
-    /// so we need to remove their invocations here to avoid infinite recursion. 
-    fn render(&self, name: &str, ctx: &tera::Context) -> Result<Response<Body>> {
-        let templates = self.templates.read()
-            .unwrap_or_else(PoisonError::into_inner);
-        match templates.render(name, ctx) {
-            Ok(body) => {
-                let mime = mime_guess::from_path(name).first_or_octet_stream();
-                Ok(Response::builder()
-                    .status(200)
-                    .header("Content-Type", &format!("{}", mime))
-                    .body(Body::from(body))
-                    .unwrap())
-            }
-            Err(e) => match e.kind {
-                tera::ErrorKind::TemplateNotFound(_) => self.error_404(),
-                _ => self.error_500(format!("while rendering template: {:?}", e)),
-            }
-        }
-    }
-
-    /// Replace the current `Tera` instance with a new one based on the current
-    /// version of the template files.
-    fn reload_templates(&self) {
-        let mut templates = self.templates.write()
-            .unwrap_or_else(PoisonError::into_inner);
-        *templates = templates::load();
     }
 
     /// Parse a query string (in the form `?i=...`) and return the parameter.
