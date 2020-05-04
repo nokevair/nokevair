@@ -19,6 +19,9 @@ use crate::utils;
 mod error;
 use error::Result;
 
+mod log;
+use log::Log;
+
 mod login;
 mod responses;
 mod state;
@@ -27,6 +30,8 @@ mod templates;
 /// Contains all state used by the application in a
 /// concurrently-accessible format.
 pub struct AppState {
+    /// The list of log messages.
+    log: Log,
     /// The `Tera` instance used to render templates.
     templates: RwLock<Tera>,
     /// The current version of the world state.
@@ -39,6 +44,7 @@ impl AppState {
     /// Initialize the state.
     pub fn new() -> Self {
         Self {
+            log: Log::new(),
             templates: RwLock::new(templates::load()),
             state: match state::latest_idx() {
                 Some(n) => state::load(n),

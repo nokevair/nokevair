@@ -35,19 +35,6 @@ impl Into<Response<Body>> for Error {
 }
 
 impl super::AppState {
-    // TODO: make these viewable in the admin console
-    // rather than just writing them to STDERR.
-
-    /// Add an info message to the log.
-    pub fn log_info<M: Display>(&self, msg: M) {
-        eprintln!("\x1b[1;33minfo: \x1b[39;49m{}", msg);
-    }
-
-    /// Add an error message to the log.
-    pub fn log_err<M: Display>(&self, msg: M) {
-        eprintln!("\x1b[1;31merror: \x1b[39;49m{}", msg);
-    }
-
     /// Return an error with status code 400.
     pub(super) fn error_400<T>(&self) -> Result<T> {
         Err(Error::new(400, "400 - The request was invalid.").into())
@@ -65,7 +52,7 @@ impl super::AppState {
 
     /// Log a message and return an error with status code 500.
     pub(super) fn error_500<T, M: Display>(&self, msg: M) -> Result<T> {
-        self.log_err(msg);
+        self.log.err(msg);
         // TODO: make this use a template
         Err(Error::new(500, "500 - An internal server error occured.").into())
     }

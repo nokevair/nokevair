@@ -16,7 +16,7 @@ impl super::AppState {
     /// Generate a unique token with which to challenge the client for the password.
     pub(super) fn gen_login_token(&self) -> u64 {
         let token = rand::random();
-        self.log_info(format!("generated token ({})", token));
+        self.log.info(format!("generated token ({})", token));
         self.login_tokens.write()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(token, Instant::now());
@@ -31,7 +31,7 @@ impl super::AppState {
         logins.retain(|_, creation_time| creation_time.elapsed() < TOKEN_AGE);
         let num_cleared = logins.len() - num_logins;
         if num_cleared > 0 {
-            self.log_info(format!(
+            self.log.info(format!(
                 "cleared {} login token{}.",
                 num_cleared,
                 if num_cleared > 1 { "s" } else { "" }
@@ -70,7 +70,7 @@ impl super::AppState {
             self.error_401()?;
         }
 
-        self.log_info("user was authenticated");
+        self.log.info("user was authenticated");
         Ok(Self::redirect("/admin"))
     }
 }
