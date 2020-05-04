@@ -81,6 +81,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "130aac562c0dd69c56b3b1cc8ffd2e17be31d0b6c25b61c96b76231aa23e39e1"
 
 [[package]]
+name = "cc"
+version = "1.0.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3d87b23d6a92cd03af510a5ade527033f6aa6fa92161e2d5863a907d4c5e31d"
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -529,6 +535,7 @@ dependencies = [
  "hyper-staticfile",
  "mime_guess",
  "rand",
+ "rlua",
  "rmpv",
  "serde",
  "serde_json",
@@ -738,6 +745,19 @@ name = "regex-syntax"
 version = "0.6.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fe5bd57d1d7414c6b5ed48563a2c855d995ff777729dcd91c369ec7fea395ae"
+
+[[package]]
+name = "rlua"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25fa5b2c667bae0b6218361e96d365e414fe4a0fa80f476b9631aa2dea2c6881"
+dependencies = [
+ "bitflags",
+ "bstr",
+ "cc",
+ "libc",
+ "num-traits",
+]
 
 [[package]]
 name = "rmp"

@@ -7,6 +7,7 @@ use serde::Deserialize;
 use tera::Tera;
 
 use tokio::time::{Duration, Instant, interval};
+use tokio::sync::mpsc;
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -21,6 +22,9 @@ use error::Result;
 
 mod log;
 use log::Log;
+
+mod lua;
+pub use lua::Rx as LuaRx;
 
 mod state;
 use state::WorldStates;
@@ -40,18 +44,22 @@ pub struct AppState {
     login_tokens: RwLock<HashMap<u64, Instant>>,
     /// The list of log messages.
     log: Log,
+    /// Permits interaction with the task running the Lua instance.
+    lua: lua::Frontend,
 }
 
 impl AppState {
     /// Initialize the state.
-    pub fn new() -> Self {
+    pub fn new() -> (LuaRx, Self) {
         let log = Log::new();
-        Self {
+        let (tx, rx) = mpsc::channel(100);
+        (rx, Self {
             templates: RwLock::new(templates::load(&log)),
             states: WorldStates::load(&log),
             login_tokens: RwLock::default(),
             log,
-        }
+            lua: lua::Frontend::new(tx),
+        })
     }
 
     /// Perform various bookkeeping tasks at regular intervals.
@@ -101,6 +109,9 @@ impl AppState {
         // Parse query strings if they are present.
         let path = path_and_query.path().trim_matches('/').to_owned();
         let param = path_and_query.query().and_then(Self::get_query_param);
+
+        // TODO: put this somewhere more reasonable
+        self.lua.exec(&self.log, String::from("pront(10 * 10)")).await;
 
         if head.method == Method::GET {
             if let Some(path) = strip_prefix(&path, "static/") {
