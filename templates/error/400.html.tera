@@ -1,0 +1,10 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Invalid Request
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>400</h1>
+    <p>The request was invalid.</p>
+{%- endblock content -%}

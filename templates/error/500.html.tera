@@ -1,0 +1,11 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Server Error
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>500</h1>
+    <p>An internal server error occurred while trying to process your request.</p>
+    <p>The admins have been notified of the problem.</p>
+{%- endblock content -%}

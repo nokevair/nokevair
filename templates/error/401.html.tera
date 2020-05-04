@@ -1,0 +1,10 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Unauthorized
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>401</h1>
+    <p>You are not authorized to view this page.</p>
+{%- endblock content -%}

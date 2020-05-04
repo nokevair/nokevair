@@ -1,0 +1,10 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Not Found
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>404</h1>
+    <p>The requested page was not found.</p>
+{%- endblock content -%}
