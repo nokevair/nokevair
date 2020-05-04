@@ -1,0 +1,18 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Admin
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>Admin Dashboard</h1>
+    <p><button onclick="write_state();">Write State</button></p>
+{%- endblock content -%}
+
+{%- block js %}
+    <script>
+        function write_state() {
+            fetch("/admin/write_state", { method: "POST" });
+        }
+    </script>
+{%- endblock js -%}

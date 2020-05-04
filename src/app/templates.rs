@@ -29,6 +29,8 @@ pub fn load(log: &Log) -> Tera {
     register!("404.html" => "templates/error/404.html.tera");
     register!("500.html" => "templates/error/500.html.tera");
 
+    register!("admin/index.html" => "templates/admin/index.html.tera");
+
     tera
 }
 

@@ -14,7 +14,7 @@ use std::net::SocketAddr;
 use std::sync::RwLock;
 
 use crate::hyper_boilerplate::Respond;
-use crate::utils;
+use crate::utils::{self, strip_prefix};
 
 mod error;
 use error::Result;
@@ -22,9 +22,11 @@ use error::Result;
 mod log;
 use log::Log;
 
+mod state;
+use state::WorldStates;
+
 mod login;
 mod responses;
-mod state;
 mod templates;
 
 /// Contains all state used by the application in a
@@ -32,12 +34,12 @@ mod templates;
 pub struct AppState {
     /// The `Tera` instance used to render templates.
     templates: RwLock<Tera>,
-    /// The list of log messages.
-    log: Log,
-    /// The current version of the world state.
-    state: rmpv::Value,
+    /// Cached data about world states.
+    states: WorldStates,
     /// Tokens used by `/login` to authenticate the user.
     login_tokens: RwLock<HashMap<u64, Instant>>,
+    /// The list of log messages.
+    log: Log,
 }
 
 impl AppState {
@@ -46,12 +48,9 @@ impl AppState {
         let log = Log::new();
         Self {
             templates: RwLock::new(templates::load(&log)),
-            log,
-            state: match state::latest_idx() {
-                Some(n) => state::load(n),
-                None => state::new(),
-            },
+            states: WorldStates::load(&log),
             login_tokens: RwLock::default(),
+            log,
         }
     }
 
@@ -89,6 +88,8 @@ impl AppState {
     /// Generate a response to the given request. Wrap the response
     /// in `Ok(_)` if it was successful, and in `Err(_)` if it was not.
     async fn try_respond(&self, req: Request<Body>) -> Result<Response<Body>> {
+        use tera::Context;
+
         // Return an error if we somehow get a URI that doesn't have a path.
         let (head, body) = req.into_parts();
         let uri = head.uri.into_parts();
@@ -102,16 +103,24 @@ impl AppState {
         let param = path_and_query.query().and_then(Self::get_query_param);
 
         if head.method == Method::GET {
-            if let Some(path) = utils::strip_prefix(&path, "static/") {
+            if let Some(path) = strip_prefix(&path, "static/") {
                 let path = format!("static/public/{}", path);
                 self.serve_file(&path).await
+            } else if let Some(path) = strip_prefix(&path, "admin/") {
+                // TODO: put these routes behind an authentication barrier
+                match path {
+                    "index" => self.render("admin/index.html", &Context::new()),
+                    _ => self.error_404(),
+                }
             } else {
-                use tera::Context;
                 match path.as_str() {
                     "about" => self.render("about.html", &Context::new()),
+                    // TODO: remove this route, but implement similar functionality
+                    // in the admin dashboard.
                     "state" => {
                         let mut context = Context::new();
-                        context.insert("state", &format!("{}", self.state));
+                        let (_, state) = self.states.latest();
+                        context.insert("state", &format!("{}", state));
                         self.render("state.html", &context)
                     },
                     "login" => {
@@ -129,9 +138,19 @@ impl AppState {
                     "could not read request body: {:?}",
                     e,
                 )))?;
-            match path.as_str() {
-                "login" => self.login(body),
-                _ => self.error_404(),
+            if let Some(path) = strip_prefix(&path, "admin/") {
+                match path {
+                    "write_state" => {
+                        self.states.save_new_version(&self.log);
+                        Ok(Self::empty_200())
+                    }
+                    _ => self.error_404(),
+                }
+            } else {
+                match path.as_str() {
+                    "login" => self.login(body),
+                    _ => self.error_404(),
+                }
             }
         } else {
             self.error_404()

@@ -13,6 +13,14 @@ impl super::AppState {
             .body(Body::empty())
             .unwrap()
     }
+
+    /// Generate an empty response with status code 200.
+    pub(super) fn empty_200() -> Response<Body> {
+        Response::builder()
+            .status(200)
+            .body(Body::empty())
+            .unwrap()
+    }
     
     /// Generate a response with the content of the file at the given path.
     /// If the file is not found, return a 404.

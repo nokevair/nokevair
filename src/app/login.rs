@@ -32,9 +32,9 @@ impl super::AppState {
         let num_cleared = num_logins - logins.len();
         if num_cleared > 0 {
             self.log.info(format!(
-                "cleared {} login token{}.",
+                "cleared {} login token{}",
                 num_cleared,
-                if num_cleared > 1 { "s" } else { "" }
+                if num_cleared == 1 { "" } else { "s" }
             ))
         }
     }
@@ -71,7 +71,7 @@ impl super::AppState {
             self.error_401()?
         } else {
             self.log.info("user was authenticated");
-            Ok(Self::redirect("/admin"))
+            Ok(Self::redirect("/admin/index"))
         }
     }
 }
