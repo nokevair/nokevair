@@ -17,11 +17,6 @@ async fn main() {
     
     tokio::join!(
         app_state.do_scheduled(),
-        async {
-            if let Err(e) = hyper_boilerplate::run_server(&app_state, addr).await {
-                // TODO: change this to some sort of logging statement
-                eprintln!("Error: {}", e);
-            }
-        }
+        hyper_boilerplate::run_server(&app_state, addr),
     );
 }

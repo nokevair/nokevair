@@ -143,4 +143,7 @@ impl Respond for AppState {
             Err(resp) => resp,
         }
     }
+    fn shutdown_on_err(&self, err: hyper::Error) {
+        self.log.err(format_args!("hyper shut down: {:?}", err))
+    }
 }
