@@ -1,10 +1,12 @@
+//! Defines the application state and describes how it can be used
+//! to serve requests and do various other tasks.
+
 use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
 use serde::Deserialize;
 use tera::Tera;
 
 use tokio::time::{Duration, Instant, interval};
-use tokio::stream::StreamExt;
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -12,50 +14,29 @@ use std::net::SocketAddr;
 use std::sync::{RwLock, PoisonError};
 
 use crate::hyper_boilerplate::Respond;
+use crate::utils;
 
+mod error;
+use error::Result;
+
+mod login;
 mod responses;
 mod state;
 mod templates;
 
-fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
-    if s.starts_with(prefix) {
-        Some(&s[prefix.as_bytes().len()..])
-    } else {
-        None
-    }
-}
-
-fn sha256(s: &str) -> String {
-    use sha2::{Sha256, digest::Digest};
-    let mut hasher = Sha256::default();
-    hasher.input(s);
-    let result: &[u8] = &hasher.result();
-    hex::encode(&result)
-}
-
-async fn read_body(body: Body) -> Vec<u8> {
-    // TODO: return an Err instead of panicking
-    body.fold(Ok(Vec::new()), |acc, chunk| {
-        match (acc, chunk) {
-            (Err(e), _) => Err(e),
-            (_, Err(e)) => Err(e),
-            (Ok(mut bytes), Ok(chunk)) => {
-                bytes.extend_from_slice(&chunk);
-                Ok(bytes)
-            }
-        }
-    }).await.unwrap()
-}
-
-const KEY_CLEAR_INTERVAL: u64 = 60;
-
+/// Contains all state used by the application in a
+/// concurrently-accessible format.
 pub struct AppState {
+    /// The `Tera` instance used to render templates.
     templates: RwLock<Tera>,
+    /// The current version of the world state.
     state: rmpv::Value,
+    /// Tokens used by `/login` to authenticate the user.
     login_tokens: RwLock<HashMap<u64, Instant>>,
 }
 
 impl AppState {
+    /// Initialize the state.
     pub fn new() -> Self {
         Self {
             templates: RwLock::new(templates::load()),
@@ -67,9 +48,10 @@ impl AppState {
         }
     }
 
-    pub async fn increment_count(&self) {
+    /// Perform various bookkeeping tasks at regular intervals.
+    pub async fn do_scheduled(&self) {
         let mut interval = interval(Duration::from_secs(1));
-        let mut i = 0;
+        let mut i = 0u64;
         loop {
             interval.tick().await;
             i += 1;
@@ -78,118 +60,74 @@ impl AppState {
             if i % 4 == 0 {
                 self.reload_templates();
             }
-            if i % KEY_CLEAR_INTERVAL == 0 {
+            if i % 240 == 0 {
                 self.clear_login_tokens();
             }
         }
     }
 
-    fn render(&self, name: &str, ctx: &tera::Context) -> Response<Body> {
-        let templates = match self.templates.read() {
-            Ok(templates) => templates,
-            Err(_) => return responses::impossible("cant get templates"),
-        };
+    /// Render a Tera template with the provided context.
+    /// TODO: `error_*()` functions will eventually attempt to call this function,
+    /// so we need to remove their invocations here to avoid infinite recursion. 
+    fn render(&self, name: &str, ctx: &tera::Context) -> Result<Response<Body>> {
+        let templates = self.templates.read()
+            .unwrap_or_else(PoisonError::into_inner);
         match templates.render(name, ctx) {
             Ok(body) => {
                 let mime = mime_guess::from_path(name).first_or_octet_stream();
-                Response::builder()
+                Ok(Response::builder()
                     .status(200)
                     .header("Content-Type", &format!("{}", mime))
                     .body(Body::from(body))
-                    .unwrap()
+                    .unwrap())
             }
             Err(e) => match e.kind {
-                tera::ErrorKind::TemplateNotFound(_) => responses::not_found(),
-                _ => responses::impossible(format!("{:?}", e)),
+                tera::ErrorKind::TemplateNotFound(_) => self.error_404(),
+                _ => self.error_500(format!("while rendering template: {:?}", e)),
             }
         }
     }
 
+    /// Replace the current `Tera` instance with a new one based on the current
+    /// version of the template files.
     fn reload_templates(&self) {
         let mut templates = self.templates.write()
             .unwrap_or_else(PoisonError::into_inner);
         *templates = templates::load();
     }
 
-    fn gen_login_token(&self) -> u64 {
-        let token: u64 = rand::random();
-        // TODO: don't publicly log secret information
-        eprintln!("Generated token: {}", token);
-        let mut logins = self.login_tokens.write()
-            .unwrap_or_else(PoisonError::into_inner);
-        logins.insert(token, Instant::now());
-        token
-    }
-
-    fn clear_login_tokens(&self) {
-        let mut logins = self.login_tokens.write()
-            .unwrap_or_else(PoisonError::into_inner);
-        let mut cleared = 0;
-        // Clear any keys that were created too long ago.
-        logins.retain(|_, creation_time| {
-            let is_valid = creation_time.elapsed() < Duration::from_secs(KEY_CLEAR_INTERVAL);
-            if !is_valid {
-                cleared += 1;
-            }
-            is_valid
-        });
-        if cleared > 0 {
-            // TODO: change this to an info statement
-            eprintln!("Cleared {} key{}.", cleared, if cleared > 1 { "s" } else { "" });
-        }
-    }
-
-    fn login(&self, body: Vec<u8>) -> Response<Body> {
+    /// Parse a query string (in the form `?i=...`) and return the parameter.
+    fn get_query_param(query: &str) -> Option<String> {
+        /// Describes the format that query strings are expected to be in.
         #[derive(Deserialize)]
-        struct LoginData {
-            token: String,
-            hash: String,
+        struct QueryDecode {
+            /// The parameter.
+            i: String
         }
-        (|| {
-            let LoginData { token, hash } = serde_json::from_slice(&body).ok()?;
-            let token: u64 = token.parse().ok()?;
-            let logins = self.login_tokens.read().unwrap();
-            let creation_time = logins.get(&token)?;
-            if creation_time.elapsed() > Duration::from_secs(KEY_CLEAR_INTERVAL) {
-                return None;
-            }
-            // TODO: use a better password, and read it from a file or something
-            let msg = format!("{}:foobar", token);
-            if sha256(&msg) == hash {
-                // TODO: set a cookie so that only authenticated people can access
-                // this route.
-                Some(responses::redirect("/admin"))
-            } else {
-                Some(responses::unauthorized())
-            }
-        })().unwrap_or_else(responses::bad_request)
+        serde_urlencoded::from_str::<QueryDecode>(query)
+            .ok()
+            .map(|q| q.i)
     }
-}
 
-#[async_trait]
-impl Respond for AppState {
-    async fn respond(&self, _: SocketAddr, req: Request<Body>) -> Response<Body> {
+    /// Generate a response to the given request. Wrap the response
+    /// in `Ok(_)` if it was successful, and in `Err(_)` if it was not.
+    async fn try_respond(&self, req: Request<Body>) -> Result<Response<Body>> {
         // Return an error if we somehow get a URI that doesn't have a path.
         let (head, body) = req.into_parts();
         let uri = head.uri.into_parts();
         let path_and_query = match uri.path_and_query {
-            None => return responses::impossible("no path"),
+            None => self.error_500("request URL does not contain a path")?,
             Some(pnq) => pnq,
         };
 
-        // Parse a query string of the form `?i=...`
-        #[derive(Deserialize)]
-        struct QueryDecode { i: String }
+        // Parse query strings if they are present.
         let path = path_and_query.path().trim_matches('/').to_owned();
-        let query_param = path_and_query.query().and_then(|query|
-            serde_urlencoded::from_str::<QueryDecode>(query)
-                .ok()
-                .map(|q| q.i));
+        let param = path_and_query.query().and_then(Self::get_query_param);
 
         if head.method == Method::GET {
-            if let Some(path) = strip_prefix(&path, "static/") {
+            if let Some(path) = utils::strip_prefix(&path, "static/") {
                 let path = format!("static/public/{}", path);
-                responses::file(&path).await
+                self.serve_file(&path).await
             } else {
                 use tera::Context;
                 match path.as_str() {
@@ -205,17 +143,27 @@ impl Respond for AppState {
                         context.insert("token", &token);
                         self.render("login.html", &context)
                     }
-                    _ => responses::not_found(),
+                    _ => self.error_404(),
                 }
             }
         } else if head.method == Method::POST {
-            let body = read_body(body).await;
+            let body = utils::read_body(body).await;
             match path.as_str() {
                 "login" => self.login(body),
-                _ => responses::not_found()
+                _ => self.error_404(),
             }
         } else {
-            responses::not_found()
+            self.error_404()
+        }
+    }
+}
+
+#[async_trait]
+impl Respond for AppState {
+    async fn respond(&self, _: SocketAddr, req: Request<Body>) -> Response<Body> {
+        match self.try_respond(req).await {
+            Ok(resp) => resp,
+            Err(resp) => resp,
         }
     }
 }

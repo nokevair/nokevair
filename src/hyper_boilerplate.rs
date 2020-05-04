@@ -1,3 +1,6 @@
+//! Expose the `Respond` trait and provide an abstraction over the details necessary
+//! to initialize and run a server.
+
 use async_trait::async_trait;
 
 use hyper::server::conn::AddrStream;
@@ -8,11 +11,16 @@ use std::net::SocketAddr;
 
 use std::sync::Arc;
 
+/// Represents a type capable of being used to generate responses to a request
+/// (i.e. server state).
 #[async_trait]
 pub trait Respond: Send + Sync + 'static {
+    /// Generate a response to the request.
     async fn respond(&self, addr: SocketAddr, req: Request<Body>) -> Response<Body>;
 }
 
+/// Run a server, using `responder` to generate responses to requests. Keep running
+/// until Hyper experiences an error.
 pub async fn run_server<R: Respond>(responder: &Arc<R>, addr: SocketAddr) -> hyper::Result<()> {
     let service = make_service_fn(move |addr_stream: &AddrStream| {
         let remote_addr = addr_stream.remote_addr();

@@ -1,3 +1,5 @@
+//! Utilities related to generating and maintaining world state.
+
 use std::path::Path;
 use std::fs::File;
 
