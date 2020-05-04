@@ -28,9 +28,9 @@ pub fn load(log: &Log) -> Tera {
 
 impl super::AppState {
     /// Render a Tera template with the provided context.
-    /// TODO: `error_*()` functions will eventually attempt to call this function,
-    /// so we need to remove their invocations here to avoid infinite recursion. 
     pub(super) fn render(&self, name: &str, ctx: &tera::Context) -> Result<Response<Body>> {
+        // TODO: `error_*()` functions will eventually attempt to call this function,
+        // so we need to remove their invocations here to avoid infinite recursion.
         let templates = self.templates.read()
             .unwrap_or_else(PoisonError::into_inner);
         match templates.render(name, ctx) {

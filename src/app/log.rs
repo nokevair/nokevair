@@ -14,13 +14,17 @@ enum MessageKind {
 
 /// Represents a message in the log.
 struct Message {
+    /// What kind of message is this?
     kind: MessageKind,
+    /// Has the admin already marked this message as deleted?
     is_deleted: bool,
+    /// The content of the message
     body: String,
 }
 
 /// Keeps track of all messages written to the log.
 pub struct Log {
+    /// The list of messages, stored in the order they were created.
     messages: RwLock<Vec<Message>>,
 }
 
