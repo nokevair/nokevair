@@ -29,7 +29,7 @@ impl super::AppState {
             .unwrap_or_else(PoisonError::into_inner);
         let num_logins = logins.len();
         logins.retain(|_, creation_time| creation_time.elapsed() < TOKEN_AGE);
-        let num_cleared = logins.len() - num_logins;
+        let num_cleared = num_logins - logins.len();
         if num_cleared > 0 {
             self.log.info(format!(
                 "cleared {} login token{}.",
