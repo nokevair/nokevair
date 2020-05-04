@@ -67,10 +67,11 @@ impl super::AppState {
         // TODO: use a better password, and read it from a file or something
         let msg = format!("{}:foobar", token);
         if utils::sha256(&msg) != hash {
-            self.error_401()?;
+            self.log.info("authentication attempt was rejected");
+            self.error_401()?
+        } else {
+            self.log.info("user was authenticated");
+            Ok(Self::redirect("/admin"))
         }
-
-        self.log.info("user was authenticated");
-        Ok(Self::redirect("/admin"))
     }
 }

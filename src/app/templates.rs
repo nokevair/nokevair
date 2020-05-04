@@ -5,16 +5,24 @@ use tera::Tera;
 
 use std::sync::PoisonError;
 
-use super::Result;
+use super::{Result, Log};
 
 /// Return a `Tera` instance containing all templates used by the application.
-pub fn load() -> Tera {
-    // TODO: return an Err instead of panicking so it can be caught
+pub fn load(log: &Log) -> Tera {
     let mut tera = Tera::default();
-    tera.add_template_file("templates/base.html.tera", Some("base.html")).unwrap();
-    tera.add_template_file("templates/about.html.tera", Some("about.html")).unwrap();
-    tera.add_template_file("templates/state.html.tera", Some("state.html")).unwrap();
-    tera.add_template_file("templates/login.html.tera", Some("login.html")).unwrap();
+
+    macro_rules! register {
+        ($name:expr => $path:expr) => {
+            if let Err(e) = tera.add_template_file($path, Some($name)) {
+                log.err(format_args!("could not load template {:?}: {}", $name, e));
+            }
+        }
+    }
+
+    register!("base.html"  => "templates/base.html.tera");
+    register!("about.html" => "templates/about.html.tera");
+    register!("state.html" => "templates/state.html.tera");
+    register!("login.html" => "templates/login.html.tera");
     tera
 }
 
@@ -46,6 +54,6 @@ impl super::AppState {
     pub(super) fn reload_templates(&self) {
         let mut templates = self.templates.write()
             .unwrap_or_else(PoisonError::into_inner);
-        *templates = load();
+        *templates = load(&self.log);
     }
 }

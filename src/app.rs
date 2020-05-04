@@ -30,10 +30,10 @@ mod templates;
 /// Contains all state used by the application in a
 /// concurrently-accessible format.
 pub struct AppState {
-    /// The list of log messages.
-    log: Log,
     /// The `Tera` instance used to render templates.
     templates: RwLock<Tera>,
+    /// The list of log messages.
+    log: Log,
     /// The current version of the world state.
     state: rmpv::Value,
     /// Tokens used by `/login` to authenticate the user.
@@ -43,9 +43,10 @@ pub struct AppState {
 impl AppState {
     /// Initialize the state.
     pub fn new() -> Self {
+        let log = Log::new();
         Self {
-            log: Log::new(),
-            templates: RwLock::new(templates::load()),
+            templates: RwLock::new(templates::load(&log)),
+            log,
             state: match state::latest_idx() {
                 Some(n) => state::load(n),
                 None => state::new(),
