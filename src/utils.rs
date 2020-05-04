@@ -19,7 +19,7 @@ pub fn sha256(s: &str) -> String {
 }
 
 /// Convert the body of a request into a byte vector.
-pub async fn read_body(body: hyper::Body) -> Vec<u8> {
+pub async fn read_body(body: hyper::Body) -> Result<Vec<u8>, hyper::Error> {
     use tokio::stream::StreamExt as _;
     // TODO: return an Err instead of panicking
     body.fold(Ok(Vec::new()), |acc, chunk| {
@@ -31,5 +31,5 @@ pub async fn read_body(body: hyper::Body) -> Vec<u8> {
                 Ok(bytes)
             }
         }
-    }).await.unwrap()
+    }).await
 }

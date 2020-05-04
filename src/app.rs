@@ -124,7 +124,11 @@ impl AppState {
                 }
             }
         } else if head.method == Method::POST {
-            let body = utils::read_body(body).await;
+            let body = utils::read_body(body).await
+                .or_else(|e| self.error_500(format_args!(
+                    "could not read request body: {:?}",
+                    e,
+                )))?;
             match path.as_str() {
                 "login" => self.login(body),
                 _ => self.error_404(),
