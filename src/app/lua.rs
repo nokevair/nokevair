@@ -1,7 +1,6 @@
 //! Use `rlua` to start a Lua instance and permit other tasks to query it.
 
 use tokio::sync::mpsc;
-
 use rlua::Lua;
 
 /// Represents a request that can be sent to the Lua task.
