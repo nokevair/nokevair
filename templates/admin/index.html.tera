@@ -6,13 +6,13 @@
 
 {%- block content %}
     <h1>Admin Dashboard</h1>
-    <p><button onclick="write_state();">Write State</button></p>
+    <p><button onclick="run_test();">Run test.lua</button></p>
 {%- endblock content -%}
 
 {%- block js %}
     <script>
-        function write_state() {
-            fetch("/admin/write_state", { method: "POST" });
+        function run_test() {
+            fetch("/admin/run_test", { method: "POST" });
         }
     </script>
 {%- endblock js -%}

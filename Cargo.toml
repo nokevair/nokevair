@@ -21,3 +21,4 @@ serde_urlencoded = "0.6.1"
 sha2 = "0.8.1"
 tera = { version = "1.2.0", default-features = false }
 tokio = { version = "0.2", features = ["time", "fs", "macros"] }
+vec_map = "0.8.2"

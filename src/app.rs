@@ -5,9 +5,7 @@ use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
 use serde::Deserialize;
 use tera::Tera;
-
 use tokio::time::{Duration, Instant, interval};
-use tokio::sync::mpsc;
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -23,11 +21,7 @@ use error::Result;
 mod log;
 use log::Log;
 
-mod lua;
-pub use lua::Rx as LuaRx;
-
-mod state;
-use state::WorldStates;
+pub mod lua;
 
 mod login;
 mod responses;
@@ -38,8 +32,6 @@ mod templates;
 pub struct AppState {
     /// The `Tera` instance used to render templates.
     templates: RwLock<Tera>,
-    /// Cached data about world states.
-    states: WorldStates,
     /// Tokens used by `/login` to authenticate the user.
     login_tokens: RwLock<HashMap<u64, Instant>>,
     /// The list of log messages.
@@ -50,15 +42,14 @@ pub struct AppState {
 
 impl AppState {
     /// Initialize the state.
-    pub fn new() -> (LuaRx, Self) {
+    pub fn new() -> (lua::Backend, Self) {
         let log = Log::new();
-        let (tx, rx) = mpsc::channel(100);
-        (rx, Self {
+        let (frontend, backend) = lua::init();
+        (backend, Self {
             templates: RwLock::new(templates::load(&log)),
-            states: WorldStates::load(&log),
             login_tokens: RwLock::default(),
             log,
-            lua: lua::Frontend::new(tx),
+            lua: frontend,
         })
     }
 
@@ -110,9 +101,6 @@ impl AppState {
         let path = path_and_query.path().trim_matches('/').to_owned();
         let param = path_and_query.query().and_then(Self::get_query_param);
 
-        // TODO: put this somewhere more reasonable
-        self.lua.exec(&self.log, String::from("pront(10 * 10)")).await;
-
         if head.method == Method::GET {
             if let Some(path) = strip_prefix(&path, "static/") {
                 let path = format!("static/public/{}", path);
@@ -126,14 +114,6 @@ impl AppState {
             } else {
                 match path.as_str() {
                     "about" => self.render("about.html", &Context::new()),
-                    // TODO: remove this route, but implement similar functionality
-                    // in the admin dashboard.
-                    "state" => {
-                        let mut context = Context::new();
-                        let (_, state) = self.states.latest();
-                        context.insert("state", &format!("{}", state));
-                        self.render("state.html", &context)
-                    },
                     "login" => {
                         let token = self.gen_login_token();
                         let mut context = Context::new();
@@ -151,8 +131,8 @@ impl AppState {
                 )))?;
             if let Some(path) = strip_prefix(&path, "admin/") {
                 match path {
-                    "write_state" => {
-                        self.states.save_new_version(&self.log);
+                    "run_test" => {
+                        self.lua.run_test_0(&self.log).await;
                         Ok(Self::empty_200())
                     }
                     _ => self.error_404(),
