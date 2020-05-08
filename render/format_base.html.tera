@@ -1,0 +1,9 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Render Base
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>Render Base</h1>
+{%- endblock content -%}

@@ -22,10 +22,20 @@ mod log;
 use log::Log;
 
 pub mod lua;
+use lua::with_renderer_entries;
 
 mod login;
 mod responses;
 mod templates;
+
+/// Parse `"10/foo"` into `(10, "foo")`.
+fn parse_version_and_name(s: &str) -> Option<(lua::Version, String)> {
+    let slash = s.find('/')?;
+    let (ver, path) = s.split_at(slash);
+    let (_slash, name) = path.split_at(1);
+    let ver = ver.parse().ok()?;
+    Some((ver, name.to_string()))
+}
 
 /// Contains all state used by the application in a
 /// concurrently-accessible format.
@@ -44,7 +54,7 @@ impl AppState {
     /// Initialize the state.
     pub fn new() -> (lua::Backend, Self) {
         let log = Log::new();
-        let (frontend, backend) = lua::init();
+        let (frontend, backend) = lua::init(&log);
         (backend, Self {
             templates: RwLock::new(templates::load(&log)),
             login_tokens: RwLock::default(),
@@ -101,6 +111,9 @@ impl AppState {
         let path = path_and_query.path().trim_matches('/').to_owned();
         let param = path_and_query.query().and_then(Self::get_query_param);
 
+        // TODO: this logic is really ugly, it should be restructured to first
+        // split the path on slashes and then parse the rest with slice patterns
+
         if head.method == Method::GET {
             if let Some(path) = strip_prefix(&path, "static/") {
                 let path = format!("static/public/{}", path);
@@ -120,7 +133,13 @@ impl AppState {
                         context.insert("token", &token);
                         self.render("login.html", &context)
                     }
-                    _ => self.error_404(),
+                    path => if let Some((ver, name)) = parse_version_and_name(path) {
+                        self.lua.render(ver, name, param).await
+                            .ok_or(())
+                            .or_else(|_| self.error_500("backend is not running"))
+                    } else {
+                        self.error_404()
+                    }
                 }
             }
         } else if head.method == Method::POST {

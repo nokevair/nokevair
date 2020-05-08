@@ -1,0 +1,11 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    People
+{%- endblock title -%}
+
+{%- block content %}
+    {#- Pluralization? Who cares #}
+    <h1>People</h1>
+    <p>There are currently {{ num_people }} people.</p>
+{%- endblock content -%}

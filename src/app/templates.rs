@@ -18,18 +18,31 @@ pub fn load(log: &Log) -> Tera {
             }
         }
     }
-
+    
+    // Generic parent, defining structure for all pages
     register!("base.html"  => "templates/base.html.tera");
+
+    // Hard-coded content pages
     register!("about.html" => "templates/about.html.tera");
-    register!("state.html" => "templates/state.html.tera");
     register!("login.html" => "templates/login.html.tera");
 
+    // Error messages
     register!("400.html" => "templates/error/400.html.tera");
     register!("401.html" => "templates/error/401.html.tera");
     register!("404.html" => "templates/error/404.html.tera");
     register!("500.html" => "templates/error/500.html.tera");
 
+    // Pages accessible only to admins
     register!("admin/index.html" => "templates/admin/index.html.tera");
+
+    // Generic parent for all pages in the renderer
+    register!("format_base.html" => "render/format_base.html.tera");
+
+    // Add pages from the directory `/render`.
+    super::with_renderer_entries(log, |name, mut path| {
+        path.push("format.html.tera");
+        register!(&format!("render/{}.html", name) => path);
+    });
 
     tera
 }

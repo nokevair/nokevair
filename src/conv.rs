@@ -142,28 +142,32 @@ pub fn lua_to_json(lua: LV) -> rlua::Result<TV> {
         LV::String(s) => s.to_str().map(TV::from),
 
         LV::Table(t) => {
+            // Get the keys in this table associated with sequential numeric indices.
             let mut array_values = Vec::new();
             for val in t.clone().sequence_values() {
                 array_values.push(lua_to_json(val?)?);
             }
-            // If all the keys in the table were indices, treat the table
-            // as an array. Note that this means we treat empty tables as
-            // arrays even though it is technically ambiguous. This means
-            // trying to iterate over a map in Tera code will produce an
-            // error if the map is empty. This decision was made because
-            // we don't expect Tera code to need to iterate over maps very
-            // frequently.
-            if array_values.len() == t.raw_len() as usize {
-                Ok(array_values.into())
-            } else {
-                let mut map_values = serde_json::Map::new();
-                // Don't attempt to support tables that contiain a mixture
-                // of indices and numeric keys.
-                for pair in t.pairs::<String, LV>() {
-                    let (k, v) = pair?;
-                    map_values.insert(k, lua_to_json(v)?);
-                }
-                Ok(map_values.into())
+
+            // Get the keys in this table associated with strings.
+            let mut string_values = serde_json::Map::new();
+            for pair in t.pairs::<String, LV>() {
+                let (k, v) = match pair {
+                    Ok(pair) => pair,
+                    Err(_) => continue,
+                };
+                string_values.insert(k, lua_to_json(v)?);
+            }
+
+            match (array_values.is_empty(), string_values.is_empty()) {
+                (false, false) => cannot_convert!(
+                    "table with mixed keys" => ("serde_json::Value") "JSON"),
+                // We treat empty tables as arrays even though it is technically
+                // ambiguous. This means trying to iterate over a map in Tera
+                // code will produce an error if the map is empty. This decision
+                // was made because we don't expect Tera code to need to iterate
+                // over maps very frequently.
+                (_, true) => Ok(array_values.into()),
+                (true, false) => Ok(string_values.into()),
             }
         }
 

@@ -1,23 +1,43 @@
 //! Use `rlua` to start a Lua instance and permit other tasks to query it.
 
 use rlua::{Lua, RegistryKey};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use vec_map::VecMap;
 
-use std::path::Path;
+use hyper::{Response, Body};
+
+use std::collections::HashMap;
 use std::fs::{self, File};
+use std::path::Path;
 
 use crate::conv;
-use super::Log;
+use super::{Log, Result, AppState};
+
+mod render;
+pub(super) use render::with_renderer_entries;
 
 /// Represents the ID of a particular version of the world state.
-type Version = u32;
+pub type Version = u32;
 
 /// Represents a request that can be sent to the Lua task.
 enum Req {
     /// A request to execute the contents of `test.lua` with the specified
     /// version of the world state. Does not expect a response.
     RunTest(Version),
+    /// A request to invoke the renderer to load a specific page.
+    /// Expects that page as a response.
+    Render {
+        /// The version of the state to use
+        ver: Version,
+        /// The page to be rendered (e.g. `people`)
+        name: String,
+        /// The value of the `i` parameter passed in the URL
+        /// via query string, if present
+        query_param: Option<String>,
+        /// The channel over which to send a response.
+        resp_tx: oneshot::Sender<Response<Body>>,
+    }
+    // TODO: add another variant for reloading the entire focus dict
 }
 
 /// The sending half of the request channel.
@@ -49,6 +69,20 @@ impl Frontend {
             log.err("backend is not running");
         }
     }
+
+    /// Send a request to the backend to render a particular state view.
+    /// Wait for a response and then return it.
+    pub async fn render(
+        &self,
+        ver: Version,
+        name: String,
+        query_param: Option<String>,
+    ) -> Option<Response<Body>> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        let req = Req::Render { ver, name, query_param, resp_tx };
+        self.tx.clone().send(req).await.ok()?;
+        resp_rx.await.ok()
+    }
 }
 
 /// The state held by the Lua backend thread.
@@ -59,16 +93,23 @@ pub struct Backend {
     state_versions: VecMap<RegistryKey>,
     /// The channel from which to receive requests.
     rx: Rx,
+    /// The functions compiled from `render/*/focus.lua` files.
+    focuses: HashMap<String, RegistryKey>,
 }
 
 impl Backend {
     /// Create the backend.
-    fn new(rx: Rx) -> Self {
-        Self {
+    fn new(rx: Rx, log: &Log) -> Self {
+        let mut self_ = Self {
+            // TODO: make this into a separate function so we can add helper
+            // functions and reload things more easily
             lua: Lua::new(),
             state_versions: VecMap::new(),
             rx,
-        }
+            focuses: HashMap::new(),
+        };
+        self_.load_focuses(log);
+        self_
     }
 
     /// Attempt to read a Message value from the file corresponding to the
@@ -159,7 +200,7 @@ impl Backend {
     }
 
     /// Create a future that continuously handles requests until the `Frontend` is dropped.
-    pub async fn run(&mut self, app_state: &super::AppState) {
+    pub async fn run(&mut self, app_state: &AppState) {
         while let Some(req) = self.rx.recv().await {
             // Warning: when using `app_state` here, keep in mind that there are currently
             // other tasks blocking on receiving a response from here, so there is
@@ -169,13 +210,26 @@ impl Backend {
                     self.ensure_loaded(ver, &app_state.log);
                     self.run_test(ver, &app_state.log);
                 }
+
+                Req::Render { ver, name, query_param, resp_tx } => {
+                    let resp = match self.render(ver, &name, query_param, app_state) {
+                        Ok(resp) => resp,
+                        Err(resp) => resp,
+                    };
+                    if let Err(e) = resp_tx.send(resp) {
+                        app_state.log.err(format_args!(
+                            "couldn't send response to error request: {:?}",
+                            e
+                        ));
+                    }
+                }
             }
         }
     }
 }
 
 /// Create a new frontend and backend.
-pub fn init() -> (Frontend, Backend) {
+pub fn init(log: &Log) -> (Frontend, Backend) {
     let (tx, rx) = mpsc::channel(100);
-    (Frontend::new(tx), Backend::new(rx))
+    (Frontend::new(tx), Backend::new(rx, log))
 }
