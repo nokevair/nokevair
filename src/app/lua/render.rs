@@ -128,7 +128,12 @@ impl super::Backend {
             }
         });
 
-        // TODO: add an info message noting how many focuses were added
+        let len = self.focuses.len();
+        log.info(format_args!(
+            "loaded {} focus function{}",
+            len,
+            if len == 1 { "" } else { "s" }
+        ));
     }
 
     /// Invoke the renderer to generate a response for a specified path,
