@@ -4,7 +4,7 @@
 use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
 use serde::Deserialize;
-use tera::Tera;
+use tera::{Tera, Context};
 use tokio::time::{Duration, Instant, interval};
 
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ use std::net::SocketAddr;
 use std::sync::RwLock;
 
 use crate::hyper_boilerplate::Respond;
-use crate::utils::{self, strip_prefix};
+use crate::utils;
 
 mod error;
 use error::Result;
@@ -97,8 +97,6 @@ impl AppState {
     /// Generate a response to the given request. Wrap the response
     /// in `Ok(_)` if it was successful, and in `Err(_)` if it was not.
     async fn try_respond(&self, req: Request<Body>) -> Result<Response<Body>> {
-        use tera::Context;
-
         // Return an error if we somehow get a URI that doesn't have a path.
         let (head, body) = req.into_parts();
         let uri = head.uri.into_parts();
@@ -108,66 +106,90 @@ impl AppState {
         };
 
         // Parse query strings if they are present.
-        let path = path_and_query.path().trim_matches('/').to_owned();
         let param = path_and_query.query().and_then(Self::get_query_param);
 
-        // TODO: this logic is really ugly, it should be restructured to first
-        // split the path on slashes and then parse the rest with slice patterns
+        // Parse the request path into its components.
+        let path = path_and_query.path()
+            .trim_matches('/')
+            .split('/')
+            .collect::<Vec<_>>();
 
         if head.method == Method::GET {
-            if let Some(path) = strip_prefix(&path, "static/") {
-                let path = format!("static/public/{}", path);
-                self.serve_file(&path).await
-            } else if let Some(path) = strip_prefix(&path, "admin/") {
-                // TODO: put these routes behind an authentication barrier
-                match path {
-                    "index" => self.render("admin/index.html", &Context::new()),
-                    _ => self.error_404(),
-                }
-            } else {
-                match path.as_str() {
-                    "about" => self.render("about.html", &Context::new()),
-                    "login" => {
-                        let token = self.gen_login_token();
-                        let mut context = Context::new();
-                        context.insert("token", &token);
-                        self.render("login.html", &context)
-                    }
-                    path => if let Some((ver, name)) = parse_version_and_name(path) {
-                        self.lua.render(ver, name, param).await
-                            .ok_or(())
-                            .or_else(|_| self.error_500("backend is not running"))
-                    } else {
-                        self.error_404()
-                    }
-                }
-            }
+            self.handle_get_request(&path, param).await
         } else if head.method == Method::POST {
             let body = utils::read_body(body).await
                 .or_else(|e| self.error_500(format_args!(
                     "could not read request body: {:?}",
                     e,
                 )))?;
-            if let Some(path) = strip_prefix(&path, "admin/") {
-                match path {
-                    "reload_templates" => {
-                        self.reload_templates();
-                        Ok(Self::empty_200())
-                    }
-                    "reload_focuses" => {
-                        self.lua.reload_focuses(&self.log).await;
-                        Ok(Self::empty_200())
-                    }
-                    _ => self.error_404(),
-                }
-            } else {
-                match path.as_str() {
-                    "login" => self.login(body),
-                    _ => self.error_404(),
-                }
-            }
+            self.handle_post_request(&path, body).await
         } else {
             self.error_404()
+        }
+    }
+
+    async fn handle_get_request(
+        &self,
+        path: &[&str],
+        param: Option<String>,
+    ) -> Result<Response<Body>> {
+        match path {
+            ["static", file] => {
+                let file_path = format!("static/public/{}", file);
+                self.serve_file(&file_path).await
+            }
+            ["about"] => self.render("about.html", &Context::new()),
+            ["login"] => {
+                let token = self.gen_login_token();
+                let mut context = Context::new();
+                context.insert("token", &token);
+                self.render("login.html", &context)
+            }
+            ["admin", path @ ..] => self.handle_admin_get_request(path).await,
+            [ver, name] => if let Ok(ver) = ver.parse() {
+                self.lua.render(ver, name.to_string(), param).await
+                    .ok_or(())
+                    .or_else(|_| self.error_500("backend is not running"))
+            } else {
+                self.error_404()
+            }
+            _ => self.error_404(),
+        }
+    }
+
+    async fn handle_admin_get_request(&self, path: &[&str]) -> Result<Response<Body>> {
+        // TODO: put this behind some kind of authentication barrier
+        match path {
+            // TODO: now that we aren't parsing URIs really stupidly, we can
+            // rename this route to `[]`.
+            ["index"] => self.render("admin/index.html", &Context::new()),
+            _ => self.error_404(),
+        }
+    }
+
+    async fn handle_post_request(
+        &self,
+        path: &[&str],
+        body: Vec<u8>,
+    ) -> Result<Response<Body>> {
+        match path {
+            ["login"] => self.login(body),
+            ["admin", path @ ..] => self.handle_admin_post_request(path).await,
+            _ => self.error_404(),
+        }
+    }
+
+    async fn handle_admin_post_request(&self, path: &[&str]) -> Result<Response<Body>> {
+        match path {
+            ["reload_templates"] => {
+                self.reload_templates();
+                Ok(Self::empty_200())
+            }
+            ["reload_focuses"] => {
+                self.lua.reload_focuses(&self.log).await;
+                Ok(Self::empty_200())
+            }
+            _ => self.error_404(),
         }
     }
 }

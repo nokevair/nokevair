@@ -1,14 +1,5 @@
 //! Various utility functions.
 
-/// If `s` starts with `prefix`, return the rest of `s`.
-pub fn strip_prefix<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
-    if s.starts_with(prefix) {
-        Some(&s[prefix.as_bytes().len()..])
-    } else {
-        None
-    }
-}
-
 /// Hash the input string with SHA256.
 pub fn sha256(s: &str) -> String {
     use sha2::{Sha256, digest::Digest};
