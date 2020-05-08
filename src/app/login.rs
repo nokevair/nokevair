@@ -71,7 +71,7 @@ impl super::AppState {
             self.error_401()?
         } else {
             self.log.info("user was authenticated");
-            Ok(Self::redirect("/admin/index"))
+            Ok(Self::redirect("/admin"))
         }
     }
 }

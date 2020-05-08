@@ -160,9 +160,7 @@ impl AppState {
     async fn handle_admin_get_request(&self, path: &[&str]) -> Result<Response<Body>> {
         // TODO: put this behind some kind of authentication barrier
         match path {
-            // TODO: now that we aren't parsing URIs really stupidly, we can
-            // rename this route to `[]`.
-            ["index"] => self.render("admin/index.html", &Context::new()),
+            [] => self.render("admin/index.html", &Context::new()),
             _ => self.error_404(),
         }
     }
