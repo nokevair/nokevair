@@ -31,7 +31,7 @@ impl super::AppState {
         logins.retain(|_, creation_time| creation_time.elapsed() < TOKEN_AGE);
         let num_cleared = num_logins - logins.len();
         if num_cleared > 0 {
-            self.log.info(format!(
+            self.log.status(format!(
                 "cleared {} login token{}",
                 num_cleared,
                 if num_cleared == 1 { "" } else { "s" }

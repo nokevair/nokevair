@@ -10,6 +10,8 @@ enum MessageKind {
     Error,
     /// An informational message.
     Info,
+    /// A confirmation of a frequent/routine action.
+    Status,
 }
 
 /// Represents a message in the log.
@@ -60,6 +62,17 @@ impl Log {
         eprintln!("\x1b[1;33minfo: \x1b[39;49m{}", body);
         self.add_message(Message {
             kind: MessageKind::Info,
+            is_deleted: false,
+            body,
+        });
+    }
+
+    /// Add a status message to the log.
+    pub fn status<M: Display>(&self, msg: M) {
+        let body = format!("{}", msg);
+        eprintln!("\x1b[1;32mstatus: \x1b[39;49m{}", body);
+        self.add_message(Message {
+            kind: MessageKind::Status,
             is_deleted: false,
             body,
         });
