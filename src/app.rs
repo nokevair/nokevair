@@ -128,6 +128,7 @@ impl AppState {
         }
     }
 
+    /// Generate a response to a GET request to the given path.
     async fn handle_get_request(
         &self,
         path: &[&str],
@@ -157,6 +158,7 @@ impl AppState {
         }
     }
 
+    /// Generate a response to a GET request to a path that starts with `/admin`.
     async fn handle_admin_get_request(&self, path: &[&str]) -> Result<Response<Body>> {
         // TODO: put this behind some kind of authentication barrier
         match path {
@@ -165,6 +167,7 @@ impl AppState {
         }
     }
 
+    /// Generate a response to a POST request to the given path.
     async fn handle_post_request(
         &self,
         path: &[&str],
@@ -177,6 +180,7 @@ impl AppState {
         }
     }
 
+    /// Generate a response to a POST request to a path that starts with `/admin`.
     async fn handle_admin_post_request(&self, path: &[&str]) -> Result<Response<Body>> {
         match path {
             ["reload_templates"] => {
