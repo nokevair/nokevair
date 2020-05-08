@@ -70,8 +70,8 @@ impl AppState {
         loop {
             interval.tick().await;
             i += 1;
-            // TODO: rather than doing this at regular intervals, have it be triggered
-            // by an authenticated POST request from the admin console.
+            // TODO: add an option not to continuously reload
+            // the templates, since we've added a button for it
             if i % 4 == 0 {
                 self.reload_templates();
             }
@@ -150,8 +150,12 @@ impl AppState {
                 )))?;
             if let Some(path) = strip_prefix(&path, "admin/") {
                 match path {
-                    "run_test" => {
-                        self.lua.run_test_0(&self.log).await;
+                    "reload_templates" => {
+                        self.reload_templates();
+                        Ok(Self::empty_200())
+                    }
+                    "reload_focuses" => {
+                        self.lua.reload_focuses(&self.log).await;
                         Ok(Self::empty_200())
                     }
                     _ => self.error_404(),

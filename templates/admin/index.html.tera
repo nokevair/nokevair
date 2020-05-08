@@ -6,13 +6,18 @@
 
 {%- block content %}
     <h1>Admin Dashboard</h1>
-    <p><button onclick="run_test();">Run test.lua</button></p>
+    <p><button onclick="reload_templates();">Reload Templates</button></p>
+    <p><button onclick="reload_focuses();">Reload Focuses</button></p>
 {%- endblock content -%}
 
 {%- block js %}
     <script>
-        function run_test() {
-            fetch("/admin/run_test", { method: "POST" });
+        function reload_templates() {
+            fetch("/admin/reload_templates", { method: "POST" });
+        }
+        
+        function reload_focuses() {
+            fetch("/admin/reload_focuses", { method: "POST" });
         }
     </script>
 {%- endblock js -%}

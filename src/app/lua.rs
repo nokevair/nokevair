@@ -7,7 +7,7 @@ use vec_map::VecMap;
 use hyper::{Response, Body};
 
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs::File;
 use std::path::Path;
 
 use crate::conv;
@@ -21,9 +21,9 @@ pub type Version = u32;
 
 /// Represents a request that can be sent to the Lua task.
 enum Req {
-    /// A request to execute the contents of `test.lua` with the specified
-    /// version of the world state. Does not expect a response.
-    RunTest(Version),
+    /// A request to re-read and re-execute all `focus.lua` files.
+    /// Does not expect a response.
+    ReloadFocuses,
     /// A request to invoke the renderer to load a specific page.
     /// Expects that page as a response.
     Render {
@@ -37,7 +37,6 @@ enum Req {
         /// The channel over which to send a response.
         resp_tx: oneshot::Sender<Response<Body>>,
     }
-    // TODO: add another variant for reloading the entire focus dict
 }
 
 /// The sending half of the request channel.
@@ -62,10 +61,10 @@ impl Frontend {
         Self { tx }
     }
 
-    /// Send a request to the backend to execute the contents of `test.lua`
-    /// on version zero of the world state. Do not wait for this to complete.
-    pub async fn run_test_0(&self, log: &Log) {
-        if self.tx.clone().send(Req::RunTest(0)).await.is_err() {
+    /// Send a request to the backend to re-read and re-execute
+    /// all `focus.lua` files. Do not wait for a response.
+    pub async fn reload_focuses(&self, log: &Log) {
+        if self.tx.clone().send(Req::ReloadFocuses).await.is_err() {
             log.err("backend is not running");
         }
     }
@@ -172,33 +171,6 @@ impl Backend {
         }
     }
 
-    /// Run the contents of `test.lua`.
-    fn run_test(&mut self, ver: Version, log: &Log) {
-        let code = match fs::read_to_string("test.lua") {
-            Ok(code) => code,
-            Err(e) => {
-                log.err(format_args!("could not read `test.lua`: {:?}", e));
-                return
-            }
-        };
-
-        let res = self.lua.context(|ctx| {
-            let state = match self.state_versions.get(ver as usize) {
-                Some(key) => ctx.registry_value::<rlua::Value>(key)?,
-                None => return Ok(()),
-            };
-
-            ctx.load(&code)
-                .set_name("test.lua")?
-                .eval::<rlua::Function>()?
-                .call(state)
-        });
-
-        if let Err(e) = res {
-            log.err(format_args!("error while running `test.lua`: {:?}", e));
-        }
-    }
-
     /// Create a future that continuously handles requests until the `Frontend` is dropped.
     pub async fn run(&mut self, app_state: &AppState) {
         while let Some(req) = self.rx.recv().await {
@@ -206,9 +178,9 @@ impl Backend {
             // other tasks blocking on receiving a response from here, so there is
             // a risk of deadlocks.
             match req {
-                Req::RunTest(ver) => {
-                    self.ensure_loaded(ver, &app_state.log);
-                    self.run_test(ver, &app_state.log);
+                Req::ReloadFocuses => {
+                    self.unload_focuses();
+                    self.load_focuses(&app_state.log);
                 }
 
                 Req::Render { ver, name, query_param, resp_tx } => {
