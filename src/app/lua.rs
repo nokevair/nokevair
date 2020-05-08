@@ -116,7 +116,7 @@ impl Backend {
     fn load_from_file(&self, ver: Version, log: &Log) -> Option<RegistryKey> {
         let path = format!("state/{}.msgpack", ver);
 
-        log.info(format_args!("trying to load lua state from file '{}'", path));
+        log.info(format_args!("loading lua state from file '{}'", path));
 
         if !Path::new(&path).exists() {
             log.err("file does not exist");
@@ -149,10 +149,7 @@ impl Backend {
             };
 
             match ctx.create_registry_value(lv) {
-                Ok(key) => {
-                    log.info("successfully loaded");
-                    Some(key)
-                }
+                Ok(key) => Some(key),
                 Err(e) => {
                     log.err(format_args!("lua object could not be added to registry: {:?}", e));
                     None
