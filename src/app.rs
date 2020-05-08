@@ -148,7 +148,7 @@ impl AppState {
             }
             ["admin", path @ ..] => self.handle_admin_get_request(path).await,
             [ver, name] => if let Ok(ver) = ver.parse() {
-                self.lua.render(ver, name.to_string(), param).await
+                self.lua.render(ver, String::from(*name), param).await
                     .ok_or(())
                     .or_else(|_| self.error_500("backend is not running"))
             } else {
