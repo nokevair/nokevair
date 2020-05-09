@@ -10,7 +10,7 @@ use tokio::time::{Duration, Instant, interval};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 // TODO: with some performance testing, maybe switch to parking_lot?
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use crate::hyper_boilerplate::Respond;
 use crate::utils;
@@ -23,6 +23,9 @@ use log::Log;
 
 pub mod lua;
 use lua::with_renderer_entries;
+
+mod sim;
+use sim::Sim;
 
 mod login;
 mod responses;
@@ -44,22 +47,25 @@ pub struct AppState {
     templates: RwLock<Tera>,
     /// Tokens used by `/login` to authenticate the user.
     login_tokens: RwLock<HashMap<u64, Instant>>,
-    /// The list of log messages.
-    log: Log,
-    /// Permits interaction with the task running the Lua instance.
+    /// Permits interaction with the task running the Lua renderer instance.
     lua: lua::Frontend,
+    /// Permits interaction with the Lua simulation program.
+    sim: Sim,
+    /// The list of log messages.
+    log: Arc<Log>,
 }
 
 impl AppState {
     /// Initialize the state.
     pub fn new() -> (lua::Backend, Self) {
-        let log = Log::new();
+        let log = Arc::new(Log::new());
         let (frontend, backend) = lua::init(&log);
         (backend, Self {
             templates: RwLock::new(templates::load(&log)),
             login_tokens: RwLock::default(),
-            log,
             lua: frontend,
+            sim: Sim::new(),
+            log,
         })
     }
 
@@ -77,6 +83,10 @@ impl AppState {
             }
             if i % 240 == 0 {
                 self.clear_login_tokens();
+            }
+            // TODO: make this happen much less frequently
+            if i % 15 == 0 {
+                self.sim.run(Arc::clone(&self.log));
             }
         }
     }
