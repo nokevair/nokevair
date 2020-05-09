@@ -31,15 +31,6 @@ mod login;
 mod responses;
 mod templates;
 
-/// Parse `"10/foo"` into `(10, "foo")`.
-fn parse_version_and_name(s: &str) -> Option<(lua::Version, String)> {
-    let slash = s.find('/')?;
-    let (ver, path) = s.split_at(slash);
-    let (_slash, name) = path.split_at(1);
-    let ver = ver.parse().ok()?;
-    Some((ver, name.to_string()))
-}
-
 /// Contains all state used by the application in a
 /// concurrently-accessible format.
 pub struct AppState {
