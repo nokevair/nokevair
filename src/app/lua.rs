@@ -14,7 +14,7 @@ use crate::conv;
 use super::{Log, Result, AppState};
 
 mod render;
-pub(super) use render::with_renderer_entries;
+pub use render::with_renderer_entries;
 
 /// Represents the ID of a particular version of the world state.
 pub type Version = u32;

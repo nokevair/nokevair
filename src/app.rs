@@ -21,8 +21,9 @@ use error::Result;
 mod log;
 use log::Log;
 
-pub mod lua;
+mod lua;
 use lua::with_renderer_entries;
+pub use lua::Backend as LuaBackend;
 
 mod sim;
 use sim::Sim;
@@ -48,7 +49,7 @@ pub struct AppState {
 
 impl AppState {
     /// Initialize the state.
-    pub fn new() -> (lua::Backend, Self) {
+    pub fn new() -> (LuaBackend, Self) {
         let log = Arc::new(Log::new());
         let (frontend, backend) = lua::init(&log);
         (backend, Self {
