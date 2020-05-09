@@ -83,8 +83,21 @@ impl Sim {
             let lua = super::create_lua_state(&log);
 
             let start_time = Instant::now();
-            // TODO: set hook here for a time limit
-
+            
+            // Every 1000 lua instructions, check that this thread hasn't been cancelled
+            // or run out of time
+            let mut triggers = rlua::HookTriggers::default();
+            triggers.every_nth_instruction = Some(1000);
+            lua.set_hook(triggers, move |_, _| {
+                if is_cancelled.load(Ordering::Relaxed) {
+                    Err(rlua::Error::RuntimeError(String::from("cancelled")))
+                } else if start_time.elapsed() > time_limit {
+                    Err(rlua::Error::RuntimeError(String::from("out of time")))
+                } else {
+                    Ok(())
+                }
+            });
+            
             let res = lua.context::<_, rlua::Result<()>>(|ctx| {
                 use rlua::Value as LV;
 
