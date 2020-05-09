@@ -9,6 +9,8 @@ use hyper::{Response, Body};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
+use std::thread;
+use std::time::Duration;
 
 use crate::conv;
 use super::{Log, Result, AppState};
@@ -16,8 +18,34 @@ use super::{Log, Result, AppState};
 mod render;
 pub use render::with_renderer_entries;
 
+mod sim;
+pub use sim::Sim;
+
+fn create_lua_state(log: &Log) -> Lua {
+    let lua = Lua::new();
+    lua.context(|ctx| {
+        let globals = ctx.globals();
+
+        macro_rules! define_function {
+            ($name:expr, $def:expr) => {{
+                let res = ctx.create_function($def)
+                    .and_then(|func| globals.set($name, func));
+                if let Err(e) = res {
+                    log.err(format_args!("could not create function '{}': {:?}", $name, e));
+                }
+            }}
+        }
+
+        define_function!("sleep", |_, ms: u64| {
+            thread::sleep(Duration::from_millis(ms));
+            Ok(())
+        });
+    });
+    lua
+}
+
 /// Represents the ID of a particular version of the world state.
-pub type Version = u32;
+type Version = u32;
 
 /// Represents a request that can be sent to the Lua task.
 enum Req {
@@ -100,9 +128,7 @@ impl Backend {
     /// Create the backend.
     fn new(rx: Rx, log: &Log) -> Self {
         let mut self_ = Self {
-            // TODO: make this into a separate function so we can add helper
-            // functions and reload things more easily
-            lua: Lua::new(),
+            lua: create_lua_state(log),
             state_versions: VecMap::new(),
             rx,
             focuses: HashMap::new(),

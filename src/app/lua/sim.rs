@@ -15,8 +15,6 @@
 //! The simulation is executed in a separate thread and uses a new Lua
 //! instance every time.
 
-use rlua::Lua;
-
 use std::fs::{self, File};
 use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock, PoisonError};
@@ -25,8 +23,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::conv;
-use super::Log;
-use super::lua::Version;
+use super::{Log, Version};
 
 pub struct Sim {
     /// The path to the file containing the Lua simulation code.
@@ -83,7 +80,7 @@ impl Sim {
         let time_limit = Duration::from_secs(self.interval.load(Ordering::Relaxed) as u64);
         
         thread::spawn(move || {
-            let lua = Lua::new();
+            let lua = super::create_lua_state(&log);
 
             let start_time = Instant::now();
             // TODO: set hook here for a time limit

@@ -35,6 +35,7 @@ end
 
 return function(state, name)
     print(pretty(state))
+    sleep(1000)
     if state == nil then
         return {people = {{0, 0}, {10, 10}}}
     else

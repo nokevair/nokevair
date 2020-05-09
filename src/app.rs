@@ -24,9 +24,7 @@ use log::Log;
 mod lua;
 use lua::with_renderer_entries;
 pub use lua::Backend as LuaBackend;
-
-mod sim;
-use sim::Sim;
+use lua::Sim;
 
 mod login;
 mod responses;
