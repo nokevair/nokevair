@@ -21,6 +21,7 @@ pub use render::with_renderer_entries;
 mod sim;
 pub use sim::Sim;
 
+/// Create a new Lua instance with several predefined functions.
 fn create_lua_state(log: &Log) -> Lua {
     let lua = Lua::new();
     lua.context(|ctx| {

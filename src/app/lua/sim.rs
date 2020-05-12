@@ -25,6 +25,7 @@ use std::time::{Duration, Instant};
 use crate::conv;
 use super::{Log, Version};
 
+/// Stores config info for the simulation.
 pub struct Sim {
     /// The path to the file containing the Lua simulation code.
     file: RwLock<Option<String>>,
@@ -35,7 +36,7 @@ pub struct Sim {
 }
 
 impl Sim {
-    // Get the lowest number `{}`.
+    /// Get the first state version that does not already have a file associated with it.
     fn get_next_state_ver() -> Version {
         let mut ver = 0;
         while Path::new(&format!("state/{}.msgpack", ver)).exists() {
@@ -44,17 +45,21 @@ impl Sim {
         ver
     }
 
+    /// Create the initial version of the simulation state.
     pub fn new() -> Self {
         Self {
             // TODO: change this to RwLock::default
             file: RwLock::new(Some(String::from("sim/0.lua"))),
             // TODO: this should be a lot higher by default
             interval: AtomicU32::new(60),
-            // This is a dummy value
-            cancel_previous: Mutex::new(Arc::new(AtomicBool::new(false))),
+            // This is a dummy value and will be discarded after the
+            // first simulation starts.
+            cancel_previous: Mutex::default(),
         }
     }
 
+    /// Execute one iteration of the simulation in a new thread. If the former
+    /// simulation thread is not done executing, let it know that it should stop.
     pub fn run(&self, log: Arc<Log>) {
         // Create a new cancellation flag for use in the new thread
         let is_cancelled = {
@@ -131,7 +136,7 @@ impl Sim {
                             }
                         };
 
-                        let lv = match conv::msgpack_to_lua(mpv, ctx) {
+                        match conv::msgpack_to_lua(mpv, ctx) {
                             Ok(lv) => lv,
                             Err(e) => {
                                 log.err(format_args!(
@@ -140,9 +145,7 @@ impl Sim {
                                 ));
                                 return Ok(())
                             }
-                        };
-                        
-                        lv
+                        }
                     }
                 };
 
