@@ -21,6 +21,9 @@ pub use render::with_renderer_entries;
 mod sim;
 pub use sim::Sim;
 
+mod version;
+pub use version::Version;
+
 /// Create a new Lua instance with several predefined functions.
 fn create_lua_state(log: &Log) -> Lua {
     let lua = Lua::new();
@@ -44,9 +47,6 @@ fn create_lua_state(log: &Log) -> Lua {
     });
     lua
 }
-
-/// Represents the ID of a particular version of the world state.
-type Version = u32;
 
 /// Represents a request that can be sent to the Lua task.
 enum Req {
@@ -141,7 +141,7 @@ impl Backend {
     /// Attempt to read a Message value from the file corresponding to the
     /// specified version, convert it to a Lua object, and put it in the registry.
     fn load_from_file(&self, ver: Version, log: &Log) -> Option<RegistryKey> {
-        let path = format!("state/{}.msgpack", ver);
+        let path = ver.path();
 
         log.info(format_args!("loading lua state from file '{}'", path));
 
@@ -188,9 +188,10 @@ impl Backend {
     /// If a particular version of the state has not been loaded, attempt to
     /// load it.
     fn ensure_loaded(&mut self, ver: Version, log: &Log) {
-        if !self.state_versions.contains_key(ver as usize) {
+        let idx = ver.as_usize();
+        if !self.state_versions.contains_key(idx) {
             if let Some(key) = self.load_from_file(ver, log) {
-                self.state_versions.insert(ver as usize, key);
+                self.state_versions.insert(idx, key);
             }
         }
     }

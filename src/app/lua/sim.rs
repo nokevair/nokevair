@@ -16,7 +16,6 @@
 //! instance every time.
 
 use std::fs::{self, File};
-use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock, PoisonError};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::thread;
@@ -36,15 +35,6 @@ pub struct Sim {
 }
 
 impl Sim {
-    /// Get the first state version that does not already have a file associated with it.
-    fn get_next_state_ver() -> Version {
-        let mut ver = 0;
-        while Path::new(&format!("state/{}.msgpack", ver)).exists() {
-            ver += 1;
-        }
-        ver
-    }
-
     /// Create the initial version of the simulation state.
     pub fn new() -> Self {
         Self {
@@ -107,14 +97,14 @@ impl Sim {
                 use rlua::Value as LV;
 
                 // Read the MessagePack file containing the latest version of the state.
-                let next_ver = Self::get_next_state_ver();
-                let current_state = match next_ver.checked_sub(1) {
+                let next_ver = Version::next_available();
+                let current_state = match next_ver.previous() {
                     None => {
                         log.status("no state files found; using fresh state");
                         LV::Nil
                     }
                     Some(ver) => {
-                        let state_path = format!("state/{}.msgpack", ver);
+                        let state_path = ver.path();
                         log.status(format_args!("using '{}' for simulation", state_path));
 
                         let mut state_file = match File::open(&state_path) {
@@ -173,18 +163,17 @@ impl Sim {
                 // Convert this state back into a MessagePack object.
                 let mpv = conv::lua_to_msgpack(new_state)?;
 
-                let real_next_ver = Self::get_next_state_ver();
+                let real_next_ver = Version::next_available();
 
                 if next_ver != real_next_ver {
                     log.info(format_args!(
-                        "writing to 'state/{}.msgpack' instead of 'state/{}.msgpack'\
-                        as was originally intended",
-                        real_next_ver,
-                        next_ver,
+                        "writing to '{}' instead of '{}' as was originally intended",
+                        real_next_ver.path(),
+                        next_ver.path(),
                     ))
                 }
 
-                let path = format!("state/{}.msgpack", real_next_ver);
+                let path = real_next_ver.path();
                 let mut new_state_file = match File::create(&path) {
                     Ok(file) => file,
                     Err(e) => {

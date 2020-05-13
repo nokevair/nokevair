@@ -166,7 +166,7 @@ impl super::Backend {
                 .or_else(|_| app_state.error_500("invalid focus fn key"))?;
             
             // Look up the state
-            let state_key = self.state_versions.get(ver as usize)
+            let state_key = self.state_versions.get(ver.as_usize())
                 // TODO: maybe a custom error message that explains
                 // why this state can't be accessed?
                 .ok_or(())
