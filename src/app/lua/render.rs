@@ -51,19 +51,9 @@ pub fn with_renderer_entries<F: FnMut(String, PathBuf)>(log: &Log, mut f: F) {
 
         // If this entry isn't a directory, ignore it.
         let path = entry.path();
-        match entry.file_type() {
-            Ok(file_type) => if !file_type.is_dir() {
-                continue
-            }
-            Err(e) => {
-                log.err(format_args!(
-                    "failed to get file type of '{}': {:?}",
-                    path.display(),
-                    e
-                ));
-                continue
-            }
-        };
+        if !path.is_dir() {
+            continue
+        }
 
         // Get the name of that directory.
         let name = match entry.file_name().to_str() {
