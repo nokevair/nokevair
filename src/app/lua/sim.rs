@@ -74,126 +74,128 @@ impl Sim {
 
         let time_limit = Duration::from_secs(self.interval.load(Ordering::Relaxed) as u64);
         
-        thread::spawn(move || {
-            let lua = super::create_lua_state(&log);
+        thread::Builder::new()
+            .name("simulation".into())
+            .spawn(move || {
+                let lua = super::create_lua_state(&log);
 
-            let start_time = Instant::now();
-            
-            // Every 1000 lua instructions, check that this thread hasn't been cancelled
-            // or run out of time
-            let mut triggers = rlua::HookTriggers::default();
-            triggers.every_nth_instruction = Some(1000);
-            lua.set_hook(triggers, move |_, _| {
-                if is_cancelled.load(Ordering::Relaxed) {
-                    Err(rlua::Error::RuntimeError(String::from("cancelled")))
-                } else if start_time.elapsed() > time_limit {
-                    Err(rlua::Error::RuntimeError(String::from("out of time")))
-                } else {
-                    Ok(())
-                }
-            });
-            
-            let res = lua.context::<_, rlua::Result<()>>(|ctx| {
-                use rlua::Value as LV;
-
-                // Read the MessagePack file containing the latest version of the state.
-                let next_ver = Version::next_available();
-                let current_state = match next_ver.previous() {
-                    None => {
-                        log.status("no state files found; using fresh state");
-                        LV::Nil
+                let start_time = Instant::now();
+                
+                // Every 1000 lua instructions, check that this thread hasn't been cancelled
+                // or run out of time
+                let mut triggers = rlua::HookTriggers::default();
+                triggers.every_nth_instruction = Some(1000);
+                lua.set_hook(triggers, move |_, _| {
+                    if is_cancelled.load(Ordering::Relaxed) {
+                        Err(rlua::Error::RuntimeError(String::from("cancelled")))
+                    } else if start_time.elapsed() > time_limit {
+                        Err(rlua::Error::RuntimeError(String::from("out of time")))
+                    } else {
+                        Ok(())
                     }
-                    Some(ver) => {
-                        let state_path = ver.path();
-                        log.status(format_args!("using '{}' for simulation", state_path));
+                });
+                
+                let res = lua.context::<_, rlua::Result<()>>(|ctx| {
+                    use rlua::Value as LV;
 
-                        let mut state_file = match File::open(&state_path) {
-                            Ok(file) => file,
-                            Err(e) => {
-                                log.err(format_args!("file could not be opened: {:?}", e));
-                                return Ok(())
-                            }
-                        };
+                    // Read the MessagePack file containing the latest version of the state.
+                    let next_ver = Version::next_available();
+                    let current_state = match next_ver.previous() {
+                        None => {
+                            log.status("no state files found; using fresh state");
+                            LV::Nil
+                        }
+                        Some(ver) => {
+                            let state_path = ver.path();
+                            log.status(format_args!("using '{}' for simulation", state_path));
 
-                        let mpv = match conv::bytes_to_msgpack(&mut state_file) {
-                            Ok(mpv) => mpv,
-                            Err(e) => {
-                                log.err(format_args!(
-                                    "file could not be read as msgpack: {:?}",
-                                    e
-                                ));
-                                return Ok(())
-                            }
-                        };
+                            let mut state_file = match File::open(&state_path) {
+                                Ok(file) => file,
+                                Err(e) => {
+                                    log.err(format_args!("file could not be opened: {:?}", e));
+                                    return Ok(())
+                                }
+                            };
 
-                        match conv::msgpack_to_lua(mpv, ctx) {
-                            Ok(lv) => lv,
-                            Err(e) => {
-                                log.err(format_args!(
-                                    "file could not be converted to lua object: {:?}",
-                                    e
-                                ));
-                                return Ok(())
+                            let mpv = match conv::bytes_to_msgpack(&mut state_file) {
+                                Ok(mpv) => mpv,
+                                Err(e) => {
+                                    log.err(format_args!(
+                                        "file could not be read as msgpack: {:?}",
+                                        e
+                                    ));
+                                    return Ok(())
+                                }
+                            };
+
+                            match conv::msgpack_to_lua(mpv, ctx) {
+                                Ok(lv) => lv,
+                                Err(e) => {
+                                    log.err(format_args!(
+                                        "file could not be converted to lua object: {:?}",
+                                        e
+                                    ));
+                                    return Ok(())
+                                }
                             }
                         }
+                    };
+
+                    // Read the Lua file that defines the simulation.
+                    let sim_code = match fs::read_to_string(&lua_file) {
+                        Ok(code) => code,
+                        Err(e) => {
+                            log.err(format_args!(
+                                "could not read simulation code in file '{}': {:?}",
+                                lua_file,
+                                e
+                            ));
+                            return Ok(())
+                        }
+                    };
+
+                    // Evaluate the Lua code to get a function.
+                    let sim_fn = ctx.load(&sim_code)
+                        .set_name(&lua_file)?
+                        .eval::<rlua::Function>()?;
+                    
+                    // Apply this function to the state to get the new state.
+                    let new_state = sim_fn.call::<_, LV>((current_state, lua_file))?;
+
+                    // Convert this state back into a MessagePack object.
+                    let mpv = conv::lua_to_msgpack(new_state)?;
+
+                    let real_next_ver = Version::next_available();
+
+                    if next_ver != real_next_ver {
+                        log.info(format_args!(
+                            "writing to '{}' instead of '{}' as was originally intended",
+                            real_next_ver.path(),
+                            next_ver.path(),
+                        ))
                     }
-                };
 
-                // Read the Lua file that defines the simulation.
-                let sim_code = match fs::read_to_string(&lua_file) {
-                    Ok(code) => code,
-                    Err(e) => {
-                        log.err(format_args!(
-                            "could not read simulation code in file '{}': {:?}",
-                            lua_file,
-                            e
-                        ));
-                        return Ok(())
+                    let path = real_next_ver.path();
+                    let mut new_state_file = match File::create(&path) {
+                        Ok(file) => file,
+                        Err(e) => {
+                            log.err(format_args!("could not create file '{}': {:?}", path, e));
+                            return Ok(());
+                        }
+                    };
+
+                    if let Err(e) = conv::msgpack_to_bytes(&mut new_state_file, &mpv) {
+                        log.err(format_args!("could not write state to file '{}': {:?}", path, e));
+                    } else {
+                        log.status(format_args!("wrote new state file '{}'", path));
                     }
-                };
 
-                // Evaluate the Lua code to get a function.
-                let sim_fn = ctx.load(&sim_code)
-                    .set_name(&lua_file)?
-                    .eval::<rlua::Function>()?;
-                
-                // Apply this function to the state to get the new state.
-                let new_state = sim_fn.call::<_, LV>((current_state, lua_file))?;
+                    Ok(())
+                });
 
-                // Convert this state back into a MessagePack object.
-                let mpv = conv::lua_to_msgpack(new_state)?;
-
-                let real_next_ver = Version::next_available();
-
-                if next_ver != real_next_ver {
-                    log.info(format_args!(
-                        "writing to '{}' instead of '{}' as was originally intended",
-                        real_next_ver.path(),
-                        next_ver.path(),
-                    ))
+                if let Err(e) = res {
+                    log.err(format!("lua error during simulation: {:?}", e));
                 }
-
-                let path = real_next_ver.path();
-                let mut new_state_file = match File::create(&path) {
-                    Ok(file) => file,
-                    Err(e) => {
-                        log.err(format_args!("could not create file '{}': {:?}", path, e));
-                        return Ok(());
-                    }
-                };
-
-                if let Err(e) = conv::msgpack_to_bytes(&mut new_state_file, &mpv) {
-                    log.err(format_args!("could not write state to file '{}': {:?}", path, e));
-                } else {
-                    log.status(format_args!("wrote new state file '{}'", path));
-                }
-
-                Ok(())
-            });
-
-            if let Err(e) = res {
-                log.err(format!("lua error during simulation: {:?}", e));
-            }
-        });
+            }).expect("failed to start simulation thread");
     }
 }
