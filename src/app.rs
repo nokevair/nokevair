@@ -136,7 +136,7 @@ impl AppState {
     ) -> Result<Response<Body>> {
         match path {
             ["static", file] => {
-                let file_path = format!("static/public/{}", file);
+                let file_path = format!("static/{}", file);
                 self.serve_file(&file_path).await
             }
             ["about"] => self.render("about.html", &Context::new()),
