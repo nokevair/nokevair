@@ -157,10 +157,8 @@ impl super::Backend {
             
             // Look up the state
             let state_key = self.state_versions.get(ver.as_usize())
-                // TODO: maybe a custom error message that explains
-                // why this state can't be accessed?
                 .ok_or(())
-                .or_else(|_| app_state.error_404())?;
+                .or_else(|_| app_state.error_404_no_state(ver))?;
             let state: LV = ctx.registry_value(state_key)
                 .or_else(|_| app_state.error_500("invalid state key"))?;
             

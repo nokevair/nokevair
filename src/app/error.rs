@@ -5,6 +5,8 @@ use tera::Context;
 
 use std::fmt::Display;
 
+use super::lua::Version;
+
 /// A custom `Result` type representing either a successful result
 /// or an HTTP error response.
 pub type Result<T> = std::result::Result<T, Response<Body>>;
@@ -27,6 +29,16 @@ impl super::AppState {
     /// Return an error with status code 404.
     pub(super) fn error_404<T>(&self) -> Result<T> {
         let mut response = self.render("404.html", &Context::new())?;
+        *response.status_mut() = hyper::StatusCode::from_u16(404).unwrap();
+        Err(response)
+    }
+
+    /// Return a 404 error caused by a particular version of the state
+    /// not being loadable.
+    pub(super) fn error_404_no_state<T>(&self, ver: Version) -> Result<T> {
+        let mut ctx = Context::new();
+        ctx.insert("ver", &ver.as_usize());
+        let mut response = self.render("404_no_state.html", &ctx)?;
         *response.status_mut() = hyper::StatusCode::from_u16(404).unwrap();
         Err(response)
     }

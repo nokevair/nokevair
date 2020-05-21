@@ -30,6 +30,7 @@ pub fn load(log: &Log) -> Tera {
     register!("400.html" => "templates/error/400.html.tera");
     register!("401.html" => "templates/error/401.html.tera");
     register!("404.html" => "templates/error/404.html.tera");
+    register!("404_no_state.html" => "templates/error/404_no_state.html.tera");
     register!("500.html" => "templates/error/500.html.tera");
 
     // Pages accessible only to admins

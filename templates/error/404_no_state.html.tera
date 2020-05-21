@@ -1,0 +1,10 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Not Found
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>404</h1>
+    <p>What will the world be like at time {{ ver }}? We'll have to wait and find out.</p>
+{%- endblock content -%}
