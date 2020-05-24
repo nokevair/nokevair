@@ -19,9 +19,9 @@ sim = "sim"
 # State files.
 state = "state"
 # Templates that aren't part of the renderer.
-templates = "templates"
+templates = "../templates"
 # Static files.
-static = "static"
+static = "../static"
 
 # Various other parameters relating to authentication.
 [security]
