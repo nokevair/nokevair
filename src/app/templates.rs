@@ -71,30 +71,14 @@ impl super::AppState {
                     .body(Body::from(body))
                     .unwrap())
             }
-            Err(e) => match e.kind {
-                tera::ErrorKind::TemplateNotFound(_) => {
-                    if name == "404.html" {
-                        // If attempting to render the 404 page causes a 404,
-                        // just return a textual error to avoid infinite recursion.
-                        self.ctx.log.err("recursive 404");
-                        Self::text_error(404, "404: the 404 page was not found")
-                    } else {
-                        self.error_404()
-                    }
-                }
-                _ => {
-                    if name == "500.html" {
-                        // If attempting to render the 500 page causes a 500,
-                        // just return a textual error to avoid infinite recursion.
-                        self.ctx.log.err("recursive 500");
-                        Self::text_error(500,
-                            "500: while attempting to handle the error, \
-                             the server encountered an error")
-                    } else {
-                        self.error_500(format_args!("while rendering template: {:?}", e))
-                    }
-                }
+            Err(_) if name == "500.html" => {
+                // If attempting to render the 500 page causes a 500,
+                // just return a textual error to avoid infinite recursion.
+                self.ctx.log.err("recursive 500");
+                Self::text_error(500,
+                    "500: while attempting to handle the error, the server encountered an error")
             }
+            Err(e) => self.error_500(format_args!("while rendering template: {:?}", e)),
         }
     }
 
