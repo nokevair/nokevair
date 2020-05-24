@@ -18,3 +18,9 @@ function submit() {
         }
     })
 }
+
+addEventListener("keydown", function(evt) {
+    if (evt.key == "Enter") {
+        submit();
+    }
+})
