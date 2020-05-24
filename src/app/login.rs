@@ -9,14 +9,17 @@ use std::sync::PoisonError;
 
 use super::{Result, utils};
 
-/// How long do tokens remain valid?
-pub const TOKEN_AGE: Duration = Duration::from_secs(60);
-
 impl super::AppState {
+    /// Return a `Duration` representing the period of time after which a token
+    /// is no longer considered valid.
+    fn get_token_age(&self) -> Duration {
+        Duration::from_secs(self.ctx.cfg.security.auth_timeout as u64)
+    }
+
     /// Generate a unique token with which to challenge the client for the password.
     pub(super) fn gen_login_token(&self) -> u64 {
         let token = rand::random();
-        self.log.info(format_args!("generated token ({})", token));
+        self.ctx.log.info(format_args!("generated token ({})", token));
         self.login_tokens.write()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(token, Instant::now());
@@ -28,10 +31,10 @@ impl super::AppState {
         let mut logins = self.login_tokens.write()
             .unwrap_or_else(PoisonError::into_inner);
         let num_logins = logins.len();
-        logins.retain(|_, creation_time| creation_time.elapsed() < TOKEN_AGE);
+        logins.retain(|_, creation_time| creation_time.elapsed() < self.get_token_age());
         let num_cleared = num_logins - logins.len();
         if num_cleared > 0 {
-            self.log.status(format!(
+            self.ctx.log.status(format!(
                 "cleared {} login token{}",
                 num_cleared,
                 if num_cleared == 1 { "" } else { "s" }
@@ -60,17 +63,17 @@ impl super::AppState {
         let creation_time = logins.get(&token).ok_or(())
             .or_else(|_| self.error_401())?;
         
-        if creation_time.elapsed() > TOKEN_AGE {
+        if creation_time.elapsed() > self.get_token_age() {
             self.error_401()?;
         }
 
         // TODO: use a better password, and read it from a file or something
         let msg = format!("{}:foobar", token);
         if utils::sha256(&msg) != hash {
-            self.log.info("authentication attempt was rejected");
+            self.ctx.log.info("authentication attempt was rejected");
             self.error_401()?
         } else {
-            self.log.info("user was authenticated");
+            self.ctx.log.info("user was authenticated");
             Ok(Self::redirect("/admin"))
         }
     }

@@ -22,19 +22,19 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::conv;
-use super::{Log, Version, Result, AppState};
+use super::{Ctx, Version, Result, AppState};
 
 /// Apply a function to certain paths in the `render` directory
 /// which correspond to renderer entries.
 /// 
 /// When `f` is invoked, the first argument is the name of the
 /// entry, and the second is the path to its directory.
-pub fn with_renderer_entries<F: FnMut(String, PathBuf)>(log: &Log, mut f: F) {
+pub fn with_renderer_entries<F: FnMut(String, PathBuf)>(app_ctx: &Ctx, mut f: F) {
     // Get an iterator over the contents in the `render` directory.
-    let dir = match fs::read_dir("render") {
+    let dir = match fs::read_dir(&app_ctx.cfg.paths.render) {
         Ok(dir) => dir,
         Err(e) => {
-            log.err(format_args!("failed to read dir 'render': {:?}", e));
+            app_ctx.log.err(format_args!("failed to read render dir: {:?}", e));
             return
         }
     };
@@ -44,7 +44,7 @@ pub fn with_renderer_entries<F: FnMut(String, PathBuf)>(log: &Log, mut f: F) {
         let entry = match entry {
             Ok(entry) => entry,
             Err(e) => {
-                log.err(format_args!("failed while reading dir 'render': {:?}", e));
+                app_ctx.log.err(format_args!("failed while reading render dir: {:?}", e));
                 continue
             }
         };
@@ -59,7 +59,7 @@ pub fn with_renderer_entries<F: FnMut(String, PathBuf)>(log: &Log, mut f: F) {
         let name = match entry.file_name().to_str() {
             Some(s) => s.to_string(),
             None => {
-                log.err(format_args!(
+                app_ctx.log.err(format_args!(
                     "failed to load focus at '{}': invalid UTF-8", path.display()));
                 continue
             }
@@ -82,14 +82,14 @@ impl super::Backend {
 
     /// Add functions from the Lua registry and to `self.focuses` corresponding
     /// to the return values of executing `/render/*/focus.lua`.
-    pub(super) fn load_focuses(&mut self, log: &Log) {
-        with_renderer_entries(log, |name, mut path| {
+    pub(super) fn load_focuses(&mut self, app_ctx: &Ctx) {
+        with_renderer_entries(app_ctx, |name, mut path| {
             // Read the file `focus.lua` inside that directory.
             path.push("focus.lua");
             let code = match fs::read_to_string(&path) {
                 Ok(code) => code,
                 Err(e) => {
-                    log.err(format_args!(
+                    app_ctx.log.err(format_args!(
                         "failed to read file '{}': {:?}",
                         path.display(),
                         e
@@ -110,7 +110,7 @@ impl super::Backend {
             });
 
             if let Err(e) = res {
-                log.err(format_args!(
+                app_ctx.log.err(format_args!(
                     "failed to create focus from file '{}': {:?}",
                     path.display(),
                     e
@@ -119,7 +119,7 @@ impl super::Backend {
         });
 
         let len = self.focuses.len();
-        log.info(format_args!(
+        app_ctx.log.info(format_args!(
             "loaded {} focus function{}",
             len,
             if len == 1 { "" } else { "s" }
@@ -145,7 +145,7 @@ impl super::Backend {
             }
         }
 
-        self.ensure_loaded(ver, &app_state.log);
+        self.ensure_loaded(ver, &app_state.ctx);
 
         self.lua.context(|ctx| {
             // Look up the focus function

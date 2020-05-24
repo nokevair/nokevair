@@ -1,0 +1,83 @@
+//! Defines the format of `Config.toml` files.
+
+use serde::Deserialize;
+
+use std::fs;
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU32;
+
+use super::Log;
+
+/// Contains all config information (deserialized from a TOML file given as
+/// a command-line argument).
+#[derive(Deserialize, Debug)]
+pub struct Cfg {
+    /// The `addr` field of the config file.
+    pub addr: SocketAddr,
+    /// The `[runtime]` section of the config file.
+    pub runtime: Runtime,
+    /// The `[paths]` section of the config file.
+    pub paths: Paths,
+    /// The `[security]` section of the config file.
+    pub security: Security,
+}
+
+/// Represents parts of the config that are mutably shared so they can
+/// be configured at runtime via the admin panel.
+#[derive(Deserialize, Debug)]
+pub struct Runtime {
+    /// How frequently do we reload templates? If this is zero, then never.
+    #[serde(rename="template-refresh")]
+    pub template_refresh: AtomicU32,
+    /// How frequently do we run the simulation? If this is zero, then never.
+    #[serde(rename="sim-rate")]
+    pub sim_rate: AtomicU32,
+}
+
+/// The part of the config that provides paths to directories where certain
+/// files are found and stored.
+#[derive(Deserialize, Debug)]
+pub struct Paths {
+    /// Renderer files.
+    pub render: PathBuf,
+    /// Simulation files.
+    pub sim: PathBuf,
+    /// State files.
+    pub state: PathBuf,
+    /// Templates that aren't part of the renderer.
+    pub templates: PathBuf,
+    /// Static files.
+    #[serde(rename="static")]
+    pub static_: PathBuf,
+}
+
+/// The part of the config that provides various parameters relating to authentication.
+#[derive(Deserialize, Debug)]
+pub struct Security {
+    /// For how many seconds is a login challenge token considered valid?
+    #[serde(rename="auth-timeout")]
+    pub auth_timeout: u32,
+    /// How frequently do we sweep the login challenge token list for outdated entries?
+    #[serde(rename="auth-sweep")]
+    pub auth_sweep: u32,
+}
+
+impl Cfg {
+    /// Load config from the TOML file passed as a command-line argument.
+    pub fn load(log: &Log) -> Option<Self> {
+        let mut args = std::env::args().skip(1);
+        let path = match args.next() {
+            Some(p) => p,
+            None => { log.err("no config file specified"); return None }
+        };
+        let contents = match fs::read(path) {
+            Ok(c) => c,
+            Err(e) => { log.err(format_args!("while reading config file: {}", e)); return None }
+        };
+        match toml::from_slice(&contents) {
+            Ok(s) => Some(s),
+            Err(e) => { log.err(format_args!("while parsing config file: {}", e)); None }
+        }
+    }
+}

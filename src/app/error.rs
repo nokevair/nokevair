@@ -45,7 +45,7 @@ impl super::AppState {
 
     /// Log a message and return an error with status code 500.
     pub(super) fn error_500<T, M: Display>(&self, msg: M) -> Result<T> {
-        self.log.err(msg);
+        self.ctx.log.err(msg);
         let mut response = self.render("500.html", &Context::new())?;
         *response.status_mut() = hyper::StatusCode::from_u16(500).unwrap();
         Err(response)

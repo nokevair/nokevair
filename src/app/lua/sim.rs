@@ -16,18 +16,19 @@
 //! instance every time.
 
 use std::fs::{self, File};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock, PoisonError};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::conv;
-use super::{Log, Version};
+use super::{Ctx, Version};
 
 /// Stores config info for the simulation.
 pub struct Sim {
     /// The path to the file containing the Lua simulation code.
-    file: RwLock<Option<String>>,
+    file: RwLock<Option<PathBuf>>,
     /// The number of seconds to wait between executions of the simulation.
     interval: AtomicU32,
     /// Used to let the previously-created simulation thread know that it should exit.
@@ -36,10 +37,11 @@ pub struct Sim {
 
 impl Sim {
     /// Create the initial version of the simulation state.
-    pub fn new() -> Self {
+    pub fn new(ctx: &Ctx) -> Self {
         Self {
-            // TODO: change this to RwLock::default
-            file: RwLock::new(Some(String::from("sim/0.lua"))),
+            // TODO: change this to RwLock::default and make it configurable
+            // in the admin panel
+            file: RwLock::new(Some(ctx.cfg.paths.sim.join("0.lua"))),
             // TODO: this should be a lot higher by default
             interval: AtomicU32::new(60),
             // This is a dummy value and will be discarded after the
@@ -50,7 +52,7 @@ impl Sim {
 
     /// Execute one iteration of the simulation in a new thread. If the former
     /// simulation thread is not done executing, let it know that it should stop.
-    pub fn run(&self, log: Arc<Log>) {
+    pub fn run(&self, app_ctx: Ctx) {
         // Create a new cancellation flag for use in the new thread
         let is_cancelled = {
             let mut cancel_previous = self.cancel_previous.lock()
@@ -65,9 +67,9 @@ impl Sim {
         let lua_file = self.file.read()
             .unwrap_or_else(PoisonError::into_inner);
         let lua_file = match &*lua_file {
-            Some(f) => f.clone(),
+            Some(f) => f.to_string_lossy().into_owned(),
             None => {
-                log.status("no simulation file specified");
+                app_ctx.log.status("no simulation file specified");
                 return
             }
         };
@@ -77,7 +79,7 @@ impl Sim {
         thread::Builder::new()
             .name("simulation".into())
             .spawn(move || {
-                let lua = super::create_lua_state(&log);
+                let lua = super::create_lua_state(&app_ctx);
 
                 let start_time = Instant::now();
                 
@@ -99,20 +101,26 @@ impl Sim {
                     use rlua::Value as LV;
 
                     // Read the MessagePack file containing the latest version of the state.
-                    let next_ver = Version::next_available();
+                    let next_ver = Version::next_available(&app_ctx);
                     let current_state = match next_ver.previous() {
                         None => {
-                            log.status("no state files found; using fresh state");
+                            app_ctx.log.status("no state files found; using fresh state");
                             LV::Nil
                         }
                         Some(ver) => {
-                            let state_path = ver.path();
-                            log.status(format_args!("using '{}' for simulation", state_path));
+                            let state_path = ver.path(&app_ctx);
+                            app_ctx.log.status(format_args!(
+                                "using '{}' for simulation",
+                                state_path.display(),
+                            ));
 
                             let mut state_file = match File::open(&state_path) {
                                 Ok(file) => file,
                                 Err(e) => {
-                                    log.err(format_args!("file could not be opened: {:?}", e));
+                                    app_ctx.log.err(format_args!(
+                                        "file could not be opened: {:?}",
+                                        e
+                                    ));
                                     return Ok(())
                                 }
                             };
@@ -120,7 +128,7 @@ impl Sim {
                             let mpv = match conv::bytes_to_msgpack(&mut state_file) {
                                 Ok(mpv) => mpv,
                                 Err(e) => {
-                                    log.err(format_args!(
+                                    app_ctx.log.err(format_args!(
                                         "file could not be read as msgpack: {:?}",
                                         e
                                     ));
@@ -131,7 +139,7 @@ impl Sim {
                             match conv::msgpack_to_lua(mpv, ctx) {
                                 Ok(lv) => lv,
                                 Err(e) => {
-                                    log.err(format_args!(
+                                    app_ctx.log.err(format_args!(
                                         "file could not be converted to lua object: {:?}",
                                         e
                                     ));
@@ -145,8 +153,8 @@ impl Sim {
                     let sim_code = match fs::read_to_string(&lua_file) {
                         Ok(code) => code,
                         Err(e) => {
-                            log.err(format_args!(
-                                "could not read simulation code in file '{}': {:?}",
+                            app_ctx.log.err(format_args!(
+                                "could not read simulation code in '{}': {:?}",
                                 lua_file,
                                 e
                             ));
@@ -165,36 +173,47 @@ impl Sim {
                     // Convert this state back into a MessagePack object.
                     let mpv = conv::lua_to_msgpack(new_state)?;
 
-                    let real_next_ver = Version::next_available();
+                    let real_next_ver = Version::next_available(&app_ctx);
 
                     if next_ver != real_next_ver {
-                        log.info(format_args!(
+                        app_ctx.log.info(format_args!(
                             "writing to '{}' instead of '{}' as was originally intended",
-                            real_next_ver.path(),
-                            next_ver.path(),
+                            real_next_ver.path(&app_ctx).display(),
+                            next_ver.path(&app_ctx).display(),
                         ))
                     }
 
-                    let path = real_next_ver.path();
+                    let path = real_next_ver.path(&app_ctx);
                     let mut new_state_file = match File::create(&path) {
                         Ok(file) => file,
                         Err(e) => {
-                            log.err(format_args!("could not create file '{}': {:?}", path, e));
+                            app_ctx.log.err(format_args!(
+                                "could not create file '{}': {:?}",
+                                path.display(),
+                                e
+                            ));
                             return Ok(());
                         }
                     };
 
                     if let Err(e) = conv::msgpack_to_bytes(&mut new_state_file, &mpv) {
-                        log.err(format_args!("could not write state to file '{}': {:?}", path, e));
+                        app_ctx.log.err(format_args!(
+                            "could not write state to file '{}': {:?}",
+                            path.display(),
+                            e
+                        ));
                     } else {
-                        log.status(format_args!("wrote new state file '{}'", path));
+                        app_ctx.log.status(format_args!(
+                            "wrote new state file '{}'",
+                            path.display()
+                        ));
                     }
 
                     Ok(())
                 });
 
                 if let Err(e) = res {
-                    log.err(format!("lua error during simulation: {:?}", e));
+                    app_ctx.log.err(format!("lua error during simulation: {:?}", e));
                 }
             }).expect("failed to start simulation thread");
     }

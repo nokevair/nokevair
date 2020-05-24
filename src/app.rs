@@ -10,16 +10,16 @@ use tokio::time::{Duration, Instant, interval};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 // TODO: with some performance testing, maybe switch to parking_lot?
-use std::sync::{Arc, RwLock};
+use std::sync::{RwLock, atomic::Ordering};
 
 use crate::hyper_boilerplate::Respond;
 use crate::utils;
 
+mod ctx;
+pub use ctx::Ctx;
+
 mod error;
 use error::Result;
-
-mod log;
-use log::Log;
 
 mod lua;
 use lua::with_renderer_entries;
@@ -41,43 +41,44 @@ pub struct AppState {
     lua: lua::Frontend,
     /// Permits interaction with the Lua simulation program.
     sim: Sim,
-    /// The list of log messages.
-    log: Arc<Log>,
+    /// Context data used throughout the application (config and logging).
+    ctx: Ctx,
 }
 
 impl AppState {
     /// Initialize the state.
-    pub fn new() -> (LuaBackend, Self) {
-        let log = Arc::new(Log::new());
-        let (frontend, backend) = lua::init(&log);
+    pub fn new(ctx: Ctx) -> (LuaBackend, Self) {
+        let (frontend, backend) = lua::init(&ctx);
         (backend, Self {
-            templates: RwLock::new(templates::load(&log)),
+            templates: RwLock::new(templates::load(&ctx)),
             login_tokens: RwLock::default(),
             lua: frontend,
-            sim: Sim::new(),
-            log,
+            sim: Sim::new(&ctx),
+            ctx,
         })
     }
 
     /// Perform various bookkeeping tasks at regular intervals.
     pub async fn do_scheduled(&self) {
+        let cfg = &self.ctx.cfg;
+        
         let mut interval = interval(Duration::from_secs(1));
         let mut i = 0u64;
         loop {
             interval.tick().await;
             i += 1;
-            // TODO: add an option not to continuously reload
-            // the templates, since we've added a button for it
-            if i % 4 == 0 {
-                self.reload_templates();
+
+            macro_rules! at_interval {
+                ($t:expr => $body:expr) => {
+                    if i.checked_rem($t as u64) == Some(0) { $body }
+                }
             }
-            if i % 240 == 0 {
-                self.clear_login_tokens();
-            }
-            // TODO: make this happen much less frequently
-            if i % 15 == 0 {
-                self.sim.run(Arc::clone(&self.log));
-            }
+
+            at_interval!(cfg.runtime.template_refresh.load(Ordering::Relaxed)
+                => self.reload_templates());
+            at_interval!(cfg.runtime.sim_rate.load(Ordering::Relaxed)
+                => self.sim.run(self.ctx.clone()));
+            at_interval!(cfg.security.auth_sweep => self.clear_login_tokens());
         }
     }
 
@@ -136,7 +137,7 @@ impl AppState {
     ) -> Result<Response<Body>> {
         match path {
             ["static", file] => {
-                let file_path = format!("static/{}", file);
+                let file_path = self.ctx.cfg.paths.static_.join(file);
                 self.serve_file(&file_path).await
             }
             ["about"] => self.render("about.html", &Context::new()),
@@ -188,7 +189,7 @@ impl AppState {
                 Ok(Self::empty_200())
             }
             ["reload_focuses"] => {
-                self.lua.reload_focuses(&self.log).await;
+                self.lua.reload_focuses(&self.ctx).await;
                 Ok(Self::empty_200())
             }
             _ => self.error_404(),
@@ -205,6 +206,6 @@ impl Respond for AppState {
         }
     }
     fn shutdown_on_err(&self, err: hyper::Error) {
-        self.log.err(format_args!("hyper shut down: {:?}", err))
+        self.ctx.log.err(format_args!("hyper shut down: {:?}", err))
     }
 }

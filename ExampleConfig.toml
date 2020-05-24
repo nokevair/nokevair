@@ -1,0 +1,32 @@
+# The address to serve from.
+addr = "127.0.0.1:3000"
+
+# Defaults for certain parameters that can be configured at runtime.
+[runtime]
+# How frequently do we reload templates? If zero, then never.
+# TODO: set this to 0
+template-refresh = 4
+# How frequently do we run the simulation? If zero, then never.
+# TODO: make this number much higher (60 * 60 or so)
+sim-rate = 15
+
+# The paths to directories where certain files are found and stored.
+[paths]
+# Renderer files.
+render = "render"
+# Simulation files.
+sim = "sim"
+# State files.
+state = "state"
+# Templates that aren't part of the renderer.
+templates = "templates"
+# Static files.
+static = "static"
+
+# Various other parameters relating to authentication.
+[security]
+# For how many seconds is a login challenge token considered valid?
+auth-timeout = 240
+# How frequently do we sweep the login challenge token list for outdated entries?
+# TODO: make this number much higher (60 * 15 or so)
+auth-sweep = 60

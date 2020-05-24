@@ -13,7 +13,7 @@ use std::thread;
 use std::time::Duration;
 
 use crate::conv;
-use super::{Log, Result, AppState};
+use super::{Ctx, Result, AppState};
 
 mod render;
 pub use render::with_renderer_entries;
@@ -25,7 +25,7 @@ mod version;
 pub use version::Version;
 
 /// Create a new Lua instance with several predefined functions.
-fn create_lua_state(log: &Log) -> Lua {
+fn create_lua_state(app_ctx: &Ctx) -> Lua {
     let lua = Lua::new();
     lua.context(|ctx| {
         let globals = ctx.globals();
@@ -35,7 +35,11 @@ fn create_lua_state(log: &Log) -> Lua {
                 let res = ctx.create_function($def)
                     .and_then(|func| globals.set($name, func));
                 if let Err(e) = res {
-                    log.err(format_args!("could not create function '{}': {:?}", $name, e));
+                    app_ctx.log.err(format_args!(
+                        "could not create function '{}': {:?}",
+                        $name,
+                        e
+                    ));
                 }
             }}
         }
@@ -92,9 +96,9 @@ impl Frontend {
 
     /// Send a request to the backend to re-read and re-execute
     /// all `focus.lua` files. Do not wait for a response.
-    pub async fn reload_focuses(&self, log: &Log) {
+    pub async fn reload_focuses(&self, ctx: &Ctx) {
         if self.tx.clone().send(Req::ReloadFocuses).await.is_err() {
-            log.err("backend is not running");
+            ctx.log.err("backend is not running");
         }
     }
 
@@ -127,33 +131,33 @@ pub struct Backend {
 
 impl Backend {
     /// Create the backend.
-    fn new(rx: Rx, log: &Log) -> Self {
+    fn new(rx: Rx, ctx: &Ctx) -> Self {
         let mut self_ = Self {
-            lua: create_lua_state(log),
+            lua: create_lua_state(ctx),
             state_versions: VecMap::new(),
             rx,
             focuses: HashMap::new(),
         };
-        self_.load_focuses(log);
+        self_.load_focuses(ctx);
         self_
     }
 
     /// Attempt to read a Message value from the file corresponding to the
     /// specified version, convert it to a Lua object, and put it in the registry.
-    fn load_from_file(&self, ver: Version, log: &Log) -> Option<RegistryKey> {
-        let path = ver.path();
+    fn load_from_file(&self, ver: Version, app_ctx: &Ctx) -> Option<RegistryKey> {
+        let path = ver.path(app_ctx);
 
-        log.info(format_args!("loading lua state from file '{}'", path));
+        app_ctx.log.info(format_args!("loading lua state from file '{}'", path.display()));
 
         if !Path::new(&path).exists() {
-            log.err("file does not exist");
+            app_ctx.log.err("file does not exist");
             return None;
         }
 
         let mut file = match File::open(&path) {
             Ok(file) => file,
             Err(e) => {
-                log.err(format_args!("file could not be opened: {:?}", e));
+                app_ctx.log.err(format_args!("file could not be opened: {:?}", e));
                 return None
             }
         };
@@ -161,7 +165,7 @@ impl Backend {
         let mpv = match conv::bytes_to_msgpack(&mut file) {
             Ok(file) => file,
             Err(e) => {
-                log.err(format_args!("file could not be read as msgpack: {:?}", e));
+                app_ctx.log.err(format_args!("file could not be read as msgpack: {:?}", e));
                 return None
             }
         };
@@ -170,7 +174,10 @@ impl Backend {
             let lv = match conv::msgpack_to_lua(mpv, ctx) {
                 Ok(lv) => lv,
                 Err(e) => {
-                    log.err(format_args!("file could not be converted to lua object: {:?}", e));
+                    app_ctx.log.err(format_args!(
+                        "file could not be converted to lua object: {:?}",
+                        e
+                    ));
                     return None
                 }
             };
@@ -178,7 +185,10 @@ impl Backend {
             match ctx.create_registry_value(lv) {
                 Ok(key) => Some(key),
                 Err(e) => {
-                    log.err(format_args!("lua object could not be added to registry: {:?}", e));
+                    app_ctx.log.err(format_args!(
+                        "lua object could not be added to registry: {:?}",
+                        e
+                    ));
                     None
                 }
             }
@@ -187,10 +197,10 @@ impl Backend {
 
     /// If a particular version of the state has not been loaded, attempt to
     /// load it.
-    fn ensure_loaded(&mut self, ver: Version, log: &Log) {
+    fn ensure_loaded(&mut self, ver: Version, ctx: &Ctx) {
         let idx = ver.as_usize();
         if !self.state_versions.contains_key(idx) {
-            if let Some(key) = self.load_from_file(ver, log) {
+            if let Some(key) = self.load_from_file(ver, ctx) {
                 self.state_versions.insert(idx, key);
             }
         }
@@ -205,7 +215,7 @@ impl Backend {
             match req {
                 Req::ReloadFocuses => {
                     self.unload_focuses();
-                    self.load_focuses(&app_state.log);
+                    self.load_focuses(&app_state.ctx);
                 }
 
                 Req::Render { ver, name, query_param, resp_tx } => {
@@ -214,7 +224,7 @@ impl Backend {
                         Err(resp) => resp,
                     };
                     if let Err(e) = resp_tx.send(resp) {
-                        app_state.log.err(format_args!(
+                        app_state.ctx.log.err(format_args!(
                             "couldn't send response to error request: {:?}",
                             e
                         ));
@@ -226,7 +236,7 @@ impl Backend {
 }
 
 /// Create a new frontend and backend.
-pub fn init(log: &Log) -> (Frontend, Backend) {
+pub fn init(ctx: &Ctx) -> (Frontend, Backend) {
     let (tx, rx) = mpsc::channel(100);
-    (Frontend::new(tx), Backend::new(rx, log))
+    (Frontend::new(tx), Backend::new(rx, ctx))
 }

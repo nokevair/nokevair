@@ -1,8 +1,10 @@
 //! Exports the `Version` type, used to manage different versions
 //! of the world state.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
+
+use super::Ctx;
 
 /// Represents a particular version of the world state.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -20,15 +22,16 @@ impl Version {
     }
 
     /// Return the path associated with this version of the state.
-    pub fn path(self) -> String {
-        // TODO: have the directory be configurable
-        format!("state/{}.msgpack", self.0)
+    pub fn path(self, ctx: &Ctx) -> PathBuf {
+        let mut path = ctx.cfg.paths.state.clone();
+        path.push(format!("{}.msgpack", self.0));
+        path
     }
 
     /// Return the first version with no associated state file.
-    pub fn next_available() -> Self {
+    pub fn next_available(ctx: &Ctx) -> Self {
         let mut ver = Self(0);
-        while Path::new(&ver.path()).exists() {
+        while Path::new(&ver.path(ctx)).exists() {
             ver = ver.next();
         }
         ver

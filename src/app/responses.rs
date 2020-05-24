@@ -2,6 +2,8 @@
 
 use hyper::{Response, Body};
 
+use std::path::Path;
+
 use super::Result;
 
 impl super::AppState {
@@ -24,7 +26,7 @@ impl super::AppState {
     
     /// Generate a response with the content of the file at the given path.
     /// If the file is not found, return a 404.
-    pub(super) async fn serve_file(&self, path: &str) -> Result<Response<Body>> {
+    pub(super) async fn serve_file(&self, path: &Path) -> Result<Response<Body>> {
         use tokio::fs::File;
         use hyper_staticfile::FileBytesStream;
         if let Ok(file) = File::open(path).await {
