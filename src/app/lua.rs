@@ -3,7 +3,6 @@
 use rlua::{Lua, RegistryKey};
 use tokio::sync::{mpsc, oneshot};
 use vec_map::VecMap;
-
 use hyper::{Response, Body};
 
 use std::collections::HashMap;
@@ -48,6 +47,15 @@ fn create_lua_state(app_ctx: &Ctx) -> Lua {
             thread::sleep(Duration::from_millis(ms));
             Ok(())
         });
+
+        define_function!("rand", |_, n: u64| {
+            if n == 0 {
+                Err(rlua::Error::RuntimeError(String::from("rand bound must be nonzero")))
+            } else {
+                use rand::Rng as _;
+                Ok(rand::thread_rng().gen_range(0, n))
+            }
+        })
     });
     lua
 }
