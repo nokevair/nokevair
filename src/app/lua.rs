@@ -165,7 +165,7 @@ impl Backend {
         let mut file = match File::open(&path) {
             Ok(file) => file,
             Err(e) => {
-                app_ctx.log.err(format_args!("file could not be opened: {:?}", e));
+                app_ctx.log.err(format_args!("file could not be opened: {}", e));
                 return None
             }
         };
@@ -173,7 +173,7 @@ impl Backend {
         let mpv = match conv::bytes_to_msgpack(&mut file) {
             Ok(file) => file,
             Err(e) => {
-                app_ctx.log.err(format_args!("file could not be read as msgpack: {:?}", e));
+                app_ctx.log.err(format_args!("file could not be read as msgpack: {}", e));
                 return None
             }
         };
@@ -231,11 +231,8 @@ impl Backend {
                         Ok(resp) => resp,
                         Err(resp) => resp,
                     };
-                    if let Err(e) = resp_tx.send(resp) {
-                        app_state.ctx.log.err(format_args!(
-                            "couldn't send response to error request: {:?}",
-                            e
-                        ));
+                    if resp_tx.send(resp).is_err() {
+                        app_state.ctx.log.err("couldn't send response to error request");
                     }
                 }
             }

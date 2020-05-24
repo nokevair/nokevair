@@ -18,7 +18,7 @@ pub fn load(ctx: &Ctx) -> Tera {
     macro_rules! register {
         ($name:expr => $path:expr) => {{
             if let Err(e) = tera.add_template_file(base_path.join($path), Some($name)) {
-                ctx.log.err(format_args!("could not load template {:?}: {:?}", $name, e));
+                ctx.log.err(format_args!("could not load template '{}': {}", $name, e));
             }
         }}
     }
@@ -78,7 +78,7 @@ impl super::AppState {
                 Self::text_error(500,
                     "500: while attempting to handle the error, the server encountered an error")
             }
-            Err(e) => self.error_500(format_args!("while rendering template: {:?}", e)),
+            Err(e) => self.error_500(format_args!("while rendering template '{}': {}", name, e)),
         }
     }
 

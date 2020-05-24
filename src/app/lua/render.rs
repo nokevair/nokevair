@@ -34,7 +34,7 @@ pub fn with_renderer_entries<F: FnMut(String, PathBuf)>(app_ctx: &Ctx, mut f: F)
     let dir = match fs::read_dir(&app_ctx.cfg.paths.render) {
         Ok(dir) => dir,
         Err(e) => {
-            app_ctx.log.err(format_args!("failed to read render dir: {:?}", e));
+            app_ctx.log.err(format_args!("failed to read render dir: {}", e));
             return
         }
     };
@@ -44,7 +44,7 @@ pub fn with_renderer_entries<F: FnMut(String, PathBuf)>(app_ctx: &Ctx, mut f: F)
         let entry = match entry {
             Ok(entry) => entry,
             Err(e) => {
-                app_ctx.log.err(format_args!("failed while reading render dir: {:?}", e));
+                app_ctx.log.err(format_args!("failed while reading render dir: {}", e));
                 continue
             }
         };
@@ -90,7 +90,7 @@ impl super::Backend {
                 Ok(code) => code,
                 Err(e) => {
                     app_ctx.log.err(format_args!(
-                        "failed to read file '{}': {:?}",
+                        "failed to read file '{}': {}",
                         path.display(),
                         e
                     ));
@@ -184,7 +184,7 @@ impl super::Backend {
             // Convert the JSON to a Tera context.
             let ctx = tera::Context::from_serialize(ctx)
                 .or_else(|e| app_state.error_500(format_args!(
-                    "while converting result of focus fn {} to Tera ctx: {:?}",
+                    "while converting result of focus fn {} to Tera ctx: {}",
                     render_call!(),
                     e
                 )))?;

@@ -115,7 +115,7 @@ impl Sim {
                                 Ok(file) => file,
                                 Err(e) => {
                                     app_ctx.log.err(format_args!(
-                                        "file could not be opened: {:?}",
+                                        "file could not be opened: {}",
                                         e
                                     ));
                                     return Ok(())
@@ -126,7 +126,7 @@ impl Sim {
                                 Ok(mpv) => mpv,
                                 Err(e) => {
                                     app_ctx.log.err(format_args!(
-                                        "file could not be read as msgpack: {:?}",
+                                        "file could not be read as msgpack: {}",
                                         e
                                     ));
                                     return Ok(())
@@ -151,7 +151,7 @@ impl Sim {
                         Ok(code) => code,
                         Err(e) => {
                             app_ctx.log.err(format_args!(
-                                "could not read simulation code in '{}': {:?}",
+                                "could not read simulation code in '{}': {}",
                                 lua_file,
                                 e
                             ));
@@ -185,7 +185,7 @@ impl Sim {
                         Ok(file) => file,
                         Err(e) => {
                             app_ctx.log.err(format_args!(
-                                "could not create file '{}': {:?}",
+                                "could not create file '{}': {}",
                                 path.display(),
                                 e
                             ));
@@ -195,7 +195,7 @@ impl Sim {
 
                     if let Err(e) = conv::msgpack_to_bytes(&mut new_state_file, &mpv) {
                         app_ctx.log.err(format_args!(
-                            "could not write state to file '{}': {:?}",
+                            "could not write state to file '{}': {}",
                             path.display(),
                             e
                         ));

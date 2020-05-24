@@ -120,7 +120,7 @@ impl AppState {
         } else if head.method == Method::POST {
             let body = utils::read_body(body).await
                 .or_else(|e| self.error_500(format_args!(
-                    "could not read request body: {:?}",
+                    "could not read request body: {}",
                     e,
                 )))?;
             self.handle_post_request(&path, body).await
@@ -206,6 +206,6 @@ impl Respond for AppState {
         }
     }
     fn shutdown_on_err(&self, err: hyper::Error) {
-        self.ctx.log.err(format_args!("hyper shut down: {:?}", err))
+        self.ctx.log.err(format_args!("hyper shut down: {}", err))
     }
 }
