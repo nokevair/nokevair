@@ -51,7 +51,7 @@ pub fn load(ctx: &Ctx) -> Tera {
 
     // Add pages from the directory `/render`.
     super::with_renderer_entries(ctx, |name, path| {
-        register!(&format!("{}.html", name) => path.join("format.html.tera"));
+        register!(&format!("render/{}.html", name) => path.join("format.html.tera"));
     });
 
     tera
