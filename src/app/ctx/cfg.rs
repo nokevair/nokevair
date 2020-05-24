@@ -2,6 +2,7 @@
 
 use serde::Deserialize;
 
+use std::env;
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -61,12 +62,25 @@ pub struct Security {
     /// How frequently do we sweep the login challenge token list for outdated entries?
     #[serde(rename="auth-sweep")]
     pub auth_sweep: u32,
+    /// The password used to access the admin panel.
+    /// (This is not read from the config file, but instead via environment variable.)
+    #[serde(skip)]
+    pub login_password: Option<String>,
+}
+
+/// Attempt to read the admin password from the `PW` environment variable.
+fn get_admin_password(log: &Log) -> Option<String> {
+    let pw = env::var("PW").ok();
+    if pw.is_none() {
+        log.info("specify admin password via PW environment variable to enable admin login");
+    }
+    pw
 }
 
 impl Cfg {
     /// Load config from the TOML file passed as a command-line argument.
     pub fn load(log: &Log) -> Option<Self> {
-        let mut args = std::env::args().skip(1);
+        let mut args = env::args().skip(1);
         let path = match args.next() {
             Some(p) => p,
             None => { log.err("no config file specified"); return None }
@@ -75,9 +89,11 @@ impl Cfg {
             Ok(c) => c,
             Err(e) => { log.err(format_args!("while reading config file: {}", e)); return None }
         };
-        match toml::from_slice(&contents) {
-            Ok(s) => Some(s),
-            Err(e) => { log.err(format_args!("while parsing config file: {}", e)); None }
-        }
+        let mut self_: Self = match toml::from_slice(&contents) {
+            Ok(s) => s,
+            Err(e) => { log.err(format_args!("while parsing config file: {}", e)); return None }
+        };
+        self_.security.login_password = get_admin_password(log);
+        Some(self_)
     }
 }

@@ -44,6 +44,14 @@ impl super::AppState {
 
     /// Generate a response to a login attempt.
     pub(super) fn login(&self, body: Vec<u8>) -> Result<Response<Body>> {
+        let password = match self.ctx.cfg.security.login_password.clone() {
+            Some(pw) => pw,
+            None => {
+                self.ctx.log.info("cannot authenticate - no admin password provided");
+                return self.error_401();
+            }
+        };
+
         /// Describes the format of authentication requests.
         #[derive(Deserialize)]
         struct LoginData {
@@ -67,8 +75,7 @@ impl super::AppState {
             self.error_401()?;
         }
 
-        // TODO: use a better password, and read it from a file or something
-        let msg = format!("{}:foobar", token);
+        let msg = format!("{}:{}", token, password);
         if utils::sha256(&msg) != hash {
             self.ctx.log.info("authentication attempt was rejected");
             self.error_401()?
