@@ -43,7 +43,7 @@ impl Sim {
             // in the admin panel
             file: RwLock::new(Some(ctx.cfg.paths.sim.join("0.lua"))),
             // TODO: this should be a lot higher by default
-            interval: AtomicU32::new(60),
+            interval: AtomicU32::new(ctx.cfg.runtime.sim_rate),
             // This is a dummy value and will be discarded after the
             // first simulation starts.
             cancel_previous: Mutex::default(),
