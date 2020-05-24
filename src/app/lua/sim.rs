@@ -18,7 +18,7 @@
 use std::fs::{self, File};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock, PoisonError};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -29,8 +29,6 @@ use super::{Ctx, Version};
 pub struct Sim {
     /// The path to the file containing the Lua simulation code.
     file: RwLock<Option<PathBuf>>,
-    /// The number of seconds to wait between executions of the simulation.
-    interval: AtomicU32,
     /// Used to let the previously-created simulation thread know that it should exit.
     cancel_previous: Mutex<Arc<AtomicBool>>, // TODO: arc_swap?
 }
@@ -42,8 +40,6 @@ impl Sim {
             // TODO: change this to RwLock::default and make it configurable
             // in the admin panel
             file: RwLock::new(Some(ctx.cfg.paths.sim.join("0.lua"))),
-            // TODO: this should be a lot higher by default
-            interval: AtomicU32::new(ctx.cfg.runtime.sim_rate),
             // This is a dummy value and will be discarded after the
             // first simulation starts.
             cancel_previous: Mutex::default(),
@@ -74,7 +70,8 @@ impl Sim {
             }
         };
 
-        let time_limit = Duration::from_secs(self.interval.load(Ordering::Relaxed) as u64);
+        let time_limit = Duration::from_secs(
+            app_ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed) as u64);
         
         thread::Builder::new()
             .name("simulation".into())
