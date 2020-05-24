@@ -6,6 +6,12 @@
 
 {%- block css %}
     <style>
+        #content-wrapper {
+            text-align: center;
+        }
+        #content {
+            display: inline-block;
+        }
         #password-box {
             margin-left: 20px;
             border: 1px solid #aaa;
@@ -13,6 +19,7 @@
             padding: 5px;
             font-size: 1em;
             transition-duration: 0.2s;
+            outline: none;
         }
         #password-box:focus {
             border-color: #3c80d3;
@@ -27,8 +34,15 @@
 
 {%- block content %}
     <h1>Admin Login</h1>
-    <p>Please enter your password: <input id="password-box" type="password" oninput="clearError();" /></p>
-    <p><button onclick="submit();">Submit</button></p>
+    <div id="content-wrapper">
+        <div id="content">
+            <p>
+                Please enter your password:
+                <input id="password-box" type="password" oninput="clearError();" />
+            </p>
+            <p><button onclick="submit();">Submit</button></p>
+        </div>
+    </div>
 {%- endblock content -%}
 
 {%- block js %}
