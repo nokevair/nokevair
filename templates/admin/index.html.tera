@@ -44,8 +44,7 @@
                 <section>
                     <span class="label">Simulation:</span>
                     <span class="setting">
-                        <!-- TODO: make this actually reflect the `sim.file` parameter -->
-                        <span class="monospace">0.lua</span>
+                        <span class="monospace">{{ sim_file }}</span>
                         <span class="link-button">(change)</span>
                     </span>
                     <br />

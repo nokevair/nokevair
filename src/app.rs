@@ -10,7 +10,7 @@ use tokio::time::{Duration, Instant, interval};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 // TODO: with some performance testing, maybe switch to parking_lot?
-use std::sync::{RwLock, atomic::Ordering};
+use std::sync::{RwLock, PoisonError, atomic::Ordering};
 
 use crate::hyper_boilerplate::Respond;
 use crate::utils;
@@ -58,7 +58,7 @@ impl AppState {
             templates: RwLock::new(Templates::load(&ctx)),
             login_tokens: RwLock::default(),
             lua: frontend,
-            sim: Sim::new(&ctx),
+            sim: Sim::new(),
             ctx,
         })
     }
@@ -179,6 +179,9 @@ impl AppState {
                 ctx.insert("num_templates", &self.num_templates());
                 ctx.insert("template_refresh",
                     &self.ctx.cfg.runtime.template_refresh.load(Ordering::Relaxed));
+                ctx.insert("sim_file",
+                    &*self.ctx.cfg.runtime.sim_file.read()
+                        .unwrap_or_else(PoisonError::into_inner));
                 ctx.insert("sim_rate",
                     &self.ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed));
                 ctx.insert("uptime", &self.start_time.elapsed().as_secs());
