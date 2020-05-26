@@ -55,6 +55,10 @@
                         <span class="link-button" onclick="updateSimRate(this);">(update)</span>
                     </span>
                 </section>
+                <section>
+                    <span class="label">Server Uptime:</span>
+                    <span class="setting">{{ uptime }} secs</span>
+                </section>
             </td>
             <td id="log-panel">[Log]</td>
         </tr>

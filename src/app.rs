@@ -35,6 +35,8 @@ mod responses;
 /// Contains all state used by the application in a
 /// concurrently-accessible format.
 pub struct AppState {
+    /// When was the server initialized?
+    start_time: Instant,
     /// Contains data used to render templates.
     templates: RwLock<Templates>,
     /// Tokens used by `/login` to authenticate the user.
@@ -52,6 +54,7 @@ impl AppState {
     pub fn new(ctx: Ctx) -> (LuaBackend, Self) {
         let (frontend, backend) = lua::init(&ctx);
         (backend, Self {
+            start_time: Instant::now(),
             templates: RwLock::new(Templates::load(&ctx)),
             login_tokens: RwLock::default(),
             lua: frontend,
@@ -174,11 +177,11 @@ impl AppState {
 
                 ctx.insert("num_focuses", &self.lua.num_focuses(&self.ctx).await);
                 ctx.insert("num_templates", &self.num_templates());
-
                 ctx.insert("template_refresh",
                     &self.ctx.cfg.runtime.template_refresh.load(Ordering::Relaxed));
                 ctx.insert("sim_rate",
                     &self.ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed));
+                ctx.insert("uptime", &self.start_time.elapsed().as_secs());
 
                 self.render("admin/index.html", &ctx)
             }
