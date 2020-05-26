@@ -2,13 +2,15 @@
 
 use std::sync::Arc;
 
+#[macro_use]
+mod utils;
+
 mod app;
 use app::AppState;
 use app::Ctx;
 
 mod conv;
 mod hyper_boilerplate;
-mod utils;
 
 #[tokio::main]
 async fn main() {

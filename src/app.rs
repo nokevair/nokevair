@@ -137,7 +137,7 @@ impl AppState {
     ) -> Result<Response<Body>> {
         match path {
             ["static", file] => {
-                let file_path = self.ctx.cfg.paths.static_.join("public").join(file);
+                let file_path = path!(&self.ctx.cfg.paths.static_, "public", file);
                 self.serve_file(&file_path).await
             }
             ["about"] => self.render("about.html", &Context::new()),
@@ -164,7 +164,7 @@ impl AppState {
         // TODO: put this behind some kind of authentication barrier
         match path {
             ["static", file] => {
-                let file_path = self.ctx.cfg.paths.static_.join("admin").join(file);
+                let file_path = path!(&self.ctx.cfg.paths.static_, "admin", file);
                 self.serve_file(&file_path).await
             }
             [] => self.render("admin/index.html", &Context::new()),

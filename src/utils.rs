@@ -23,3 +23,13 @@ pub async fn read_body(body: hyper::Body) -> Result<Vec<u8>, hyper::Error> {
         }
     }).await
 }
+
+/// Join a sequence of paths together into a `PathBuf`.
+#[macro_export]
+macro_rules! path {
+    ($fst:expr $(, $parts:expr)*) => {{
+        let mut path = std::path::PathBuf::from($fst);
+        $(path.push($parts);)*
+        path
+    }}
+}
