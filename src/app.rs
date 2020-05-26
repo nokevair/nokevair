@@ -4,7 +4,7 @@
 use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
 use serde::Deserialize;
-use tera::{Tera, Context};
+use tera::Context;
 use tokio::time::{Duration, Instant, interval};
 
 use std::collections::HashMap;
@@ -26,15 +26,17 @@ use lua::with_renderer_entries;
 pub use lua::Backend as LuaBackend;
 use lua::Sim;
 
+mod templates;
+use templates::Templates;
+
 mod login;
 mod responses;
-mod templates;
 
 /// Contains all state used by the application in a
 /// concurrently-accessible format.
 pub struct AppState {
-    /// The `Tera` instance used to render templates.
-    templates: RwLock<Tera>,
+    /// Contains data used to render templates.
+    templates: RwLock<Templates>,
     /// Tokens used by `/login` to authenticate the user.
     login_tokens: RwLock<HashMap<u64, Instant>>,
     /// Permits interaction with the task running the Lua renderer instance.
@@ -50,7 +52,7 @@ impl AppState {
     pub fn new(ctx: Ctx) -> (LuaBackend, Self) {
         let (frontend, backend) = lua::init(&ctx);
         (backend, Self {
-            templates: RwLock::new(templates::load(&ctx)),
+            templates: RwLock::new(Templates::load(&ctx)),
             login_tokens: RwLock::default(),
             lua: frontend,
             sim: Sim::new(&ctx),
@@ -167,7 +169,12 @@ impl AppState {
                 let file_path = path!(&self.ctx.cfg.paths.static_, "admin", file);
                 self.serve_file(&file_path).await
             }
-            [] => self.render("admin/index.html", &Context::new()),
+            [] => {
+                let mut ctx = Context::new();
+                ctx.insert("num_focuses", &self.lua.num_focuses(&self.ctx).await);
+                ctx.insert("num_templates", &self.num_templates());
+                self.render("admin/index.html", &ctx)
+            }
             _ => self.error_404(),
         }
     }

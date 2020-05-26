@@ -8,6 +8,7 @@ use hyper::{Response, Body};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
+use std::sync::{RwLock, PoisonError};
 use std::thread;
 use std::time::Duration;
 
@@ -77,7 +78,13 @@ enum Req {
         query_param: Option<String>,
         /// The channel over which to send a response.
         resp_tx: oneshot::Sender<Response<Body>>,
-    }
+    },
+    /// A request to return the number of focuses that have been loaded.
+    /// Expects a `usize` as a response.
+    GetNumFocuses {
+        /// The channel over which to send a response.
+        resp_tx: oneshot::Sender<usize>,
+    },
 }
 
 /// The sending half of the request channel.
@@ -94,12 +101,18 @@ pub struct Frontend {
     // keep this in a RwLock rather than cloning it on every
     // message we send.
     tx: Tx,
+    /// The value returned by `num_focuses()` when it was last called,
+    /// or `None` if that has since been invalidated.
+    num_focuses: RwLock<Option<usize>>,
 }
 
 impl Frontend {
     /// Create the frontend.
     fn new(tx: Tx) -> Self {
-        Self { tx }
+        Self {
+            tx,
+            num_focuses: RwLock::default(),
+        }
     }
 
     /// Send a request to the backend to re-read and re-execute
@@ -107,6 +120,12 @@ impl Frontend {
     pub async fn reload_focuses(&self, ctx: &Ctx) {
         if self.tx.clone().send(Req::ReloadFocuses).await.is_err() {
             ctx.log.err("backend is not running");
+        } else {
+            // The number of focuses may have changed, so we must
+            // invalidate the cached value.
+            let mut num_focuses = self.num_focuses.write()
+                .unwrap_or_else(PoisonError::into_inner);
+            *num_focuses = None;
         }
     }
 
@@ -122,6 +141,36 @@ impl Frontend {
         let req = Req::Render { ver, name, query_param, resp_tx };
         self.tx.clone().send(req).await.ok()?;
         resp_rx.await.ok()
+    }
+    
+    /// Return the number of focuses.
+    pub async fn num_focuses(&self, ctx: &Ctx) -> usize {
+        let cached = *self.num_focuses.read()
+            .unwrap_or_else(PoisonError::into_inner);
+        match cached {
+            Some(n) => n,
+            None => {
+                let (resp_tx, resp_rx) = oneshot::channel();
+                let req = Req::GetNumFocuses { resp_tx };
+                if self.tx.clone().send(req).await.is_err() {
+                    ctx.log.err("backend is not running");
+                    0
+                } else {
+                    match resp_rx.await {
+                        Ok(n) => {
+                            let mut cache = self.num_focuses.write()
+                                .unwrap_or_else(PoisonError::into_inner);
+                            *cache = Some(n);
+                            n
+                        }
+                        Err(_) => {
+                            ctx.log.err("backend is not running");
+                            0
+                        }
+                    }
+                }
+            },
+        }
     }
 }
 
@@ -232,7 +281,13 @@ impl Backend {
                         Err(resp) => resp,
                     };
                     if resp_tx.send(resp).is_err() {
-                        app_state.ctx.log.err("couldn't send response to error request");
+                        app_state.ctx.log.err("couldn't send response to render request");
+                    }
+                }
+
+                Req::GetNumFocuses { resp_tx } => {
+                    if resp_tx.send(self.focuses.len()).is_err() {
+                        app_state.ctx.log.err("couldn't send response to request for focuses");
                     }
                 }
             }

@@ -17,7 +17,7 @@
                     <span class="label">Focuses:</span>
                     <span class="setting">
                         <span class="description">
-                            <span class="num-loaded">#</span>
+                            <span class="num-loaded">{{ num_focuses }}</span>
                             loaded
                             <span class="reload-button" onclick="reload_focuses(this)">(reload)</span>
                         </span>
@@ -28,7 +28,7 @@
                     <span class="label">Templates:</span>
                     <span class="setting">
                         <span class="description">
-                            <span class="num-loaded">#</span>
+                            <span class="num-loaded">{{ num_templates }}</span>
                             loaded
                             <span class="reload-button" onclick="reload_templates(this)">(reload)</span>
                         </span>
