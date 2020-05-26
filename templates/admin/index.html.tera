@@ -70,9 +70,9 @@
                 </div>
                 <div id="log-messages-container">
                     <div id="log-messages">
-                        <div class="log-message status">Status</div>
-                        <div class="log-message info">Info</div>
                         <div class="log-message err">Error</div>
+                        <div class="log-message info">Info</div>
+                        <div class="log-message status">Status</div>
                     </div>
                 </div>
             </div>
