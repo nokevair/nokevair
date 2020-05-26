@@ -137,7 +137,7 @@ impl AppState {
     ) -> Result<Response<Body>> {
         match path {
             ["static", file] => {
-                let file_path = self.ctx.cfg.paths.static_.join(file);
+                let file_path = self.ctx.cfg.paths.static_.join("public").join(file);
                 self.serve_file(&file_path).await
             }
             ["about"] => self.render("about.html", &Context::new()),
