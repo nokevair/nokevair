@@ -10,58 +10,74 @@
 
 {%- block content %}
     <h1>Admin Dashboard</h1>
-    <table id="panels">
-        <tr>
-            <td id="settings-panel">
-                <section>
-                    <span class="label">Focuses:</span>
-                    <span class="setting">
-                        <span class="description">
-                            <span class="num-loaded">{{ num_focuses }}</span>
-                            loaded
-                            <span class="link-button" onclick="reloadFocuses(this)">(reload)</span>
-                        </span>
-                        <span class="description" style="display: none;">&hellip;</span>
+    <div id="panels">
+        <div id="settings-panel">
+            <section>
+                <span class="label">Focuses:</span>
+                <span class="setting">
+                    <span class="description">
+                        <span class="num-loaded">{{ num_focuses }}</span>
+                        loaded
+                        <span class="link-button" onclick="reloadFocuses(this)">(reload)</span>
                     </span>
-                </section>
-                <section>
-                    <span class="label">Templates:</span>
-                    <span class="setting">
-                        <span class="description">
-                            <span class="num-loaded">{{ num_templates }}</span>
-                            loaded
-                            <span class="link-button" onclick="reloadTemplates(this)">(reload)</span>
-                        </span>
-                        <span class="description" style="display: none;">&hellip;</span>
+                    <span class="description" style="display: none;">&hellip;</span>
+                </span>
+            </section>
+            <section>
+                <span class="label">Templates:</span>
+                <span class="setting">
+                    <span class="description">
+                        <span class="num-loaded">{{ num_templates }}</span>
+                        loaded
+                        <span class="link-button" onclick="reloadTemplates(this)">(reload)</span>
                     </span>
-                    <br />
-                    <span class="secondary-label">Auto-reload:</span>
-                    <span class="secondary-setting">
-                        <input autocomplete="off" type="number" min="0" value="{{ template_refresh }}" /> secs
-                        <span class="link-button" onclick="updateTemplateRefresh(this);">(update)</span>
-                    </span>
-                </section>
-                <section>
-                    <span class="label">Simulation:</span>
-                    <span class="setting">
-                        <span class="monospace">{{ sim_file }}</span>
-                        <span class="link-button">(change)</span>
-                    </span>
-                    <br />
-                    <span class="secondary-label">Auto-run:</span>
-                    <span class="secondary-setting">
-                        <input autocomplete="off" type="number" min="0" value="{{ sim_rate }}" /> secs
-                        <span class="link-button" onclick="updateSimRate(this);">(update)</span>
-                    </span>
-                </section>
-                <section>
-                    <span class="label">Server Uptime:</span>
-                    <span class="setting">{{ uptime }} secs</span>
-                </section>
-            </td>
-            <td id="log-panel">[Log]</td>
-        </tr>
-    </table>
+                    <span class="description" style="display: none;">&hellip;</span>
+                </span>
+                <br />
+                <span class="secondary-label">Auto-reload:</span>
+                <span class="secondary-setting">
+                    <input autocomplete="off" type="number" min="0" value="{{ template_refresh }}" /> secs
+                    <span class="link-button" onclick="updateTemplateRefresh(this);">(update)</span>
+                </span>
+            </section>
+            <section>
+                <span class="label">Simulation:</span>
+                <span class="setting">
+                    <span class="monospace">{{ sim_file }}</span>
+                    <span class="link-button">(change)</span>
+                </span>
+                <br />
+                <span class="secondary-label">Auto-run:</span>
+                <span class="secondary-setting">
+                    <input autocomplete="off" type="number" min="0" value="{{ sim_rate }}" /> secs
+                    <span class="link-button" onclick="updateSimRate(this);">(update)</span>
+                </span>
+            </section>
+            <section>
+                <span class="label">Server Uptime:</span>
+                <span class="setting">{{ uptime }} secs</span>
+            </section>
+        </div>
+        <div id="log-panel">
+            <div id="log-header">Log</div>
+            <div id="log-body">
+                <div id="log-settings">
+                    <div><input type="checkbox" autocomplete="off" checked="true" /> error</div>
+                    <div><input type="checkbox" autocomplete="off" checked="true" /> info</div>
+                    <div><input type="checkbox" autocomplete="off" checked="true" /> status</div>
+                    <div><input type="checkbox" autocomplete="off" /> deleted</div>
+                    <div id="log-reload-button" class="link-button">(reload)</div>
+                </div>
+                <div id="log-messages-container">
+                    <div id="log-messages">
+                        <div class="log-message status">Status</div>
+                        <div class="log-message info">Info</div>
+                        <div class="log-message err">Error</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {%- endblock content -%}
 
 {%- block js %}
