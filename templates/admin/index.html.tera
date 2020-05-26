@@ -4,6 +4,10 @@
     Admin
 {%- endblock title -%}
 
+{%- block css %}
+    <link type="text/css" rel="stylesheet" href="/admin/static/index.css" />
+{%- endblock css -%}
+
 {%- block content %}
     <h1>Admin Dashboard</h1>
     <p><button onclick="reload_templates();">Reload Templates</button></p>

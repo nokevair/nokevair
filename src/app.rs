@@ -163,6 +163,10 @@ impl AppState {
     async fn handle_admin_get_request(&self, path: &[&str]) -> Result<Response<Body>> {
         // TODO: put this behind some kind of authentication barrier
         match path {
+            ["static", file] => {
+                let file_path = self.ctx.cfg.paths.static_.join("admin").join(file);
+                self.serve_file(&file_path).await
+            }
             [] => self.render("admin/index.html", &Context::new()),
             _ => self.error_404(),
         }
