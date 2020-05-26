@@ -52,7 +52,7 @@
     background-color: inherit;
     color: inherit;
     text-align: right;
-    border-bottom: 1px solid black;
+    border-bottom: 1px solid #555;
 }
 
 .link-button {
