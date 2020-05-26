@@ -19,7 +19,7 @@
                         <span class="description">
                             <span class="num-loaded">{{ num_focuses }}</span>
                             loaded
-                            <span class="reload-button" onclick="reload_focuses(this)">(reload)</span>
+                            <span class="link-button" onclick="reloadFocuses(this)">(reload)</span>
                         </span>
                         <span class="description" style="display: none;">&hellip;</span>
                     </span>
@@ -30,9 +30,15 @@
                         <span class="description">
                             <span class="num-loaded">{{ num_templates }}</span>
                             loaded
-                            <span class="reload-button" onclick="reload_templates(this)">(reload)</span>
+                            <span class="link-button" onclick="reloadTemplates(this)">(reload)</span>
                         </span>
                         <span class="description" style="display: none;">&hellip;</span>
+                    </span>
+                    <br />
+                    <span class="secondary-label">Auto-reload:</span>
+                    <span class="secondary-setting">
+                        <input autocomplete="off" type="number" min="0" value="{{ template_refresh }}" /> secs
+                        <span class="link-button" onclick="updateTemplateRefresh(this);">(update)</span>
                     </span>
                 </section>
                 <section>
@@ -59,12 +65,25 @@
             ellipsis.style.display = "none";
         }
 
-        function reload_templates(elem) {
+        function reloadTemplates(elem) {
             reload("/admin/reload_templates", elem)
         }
         
-        function reload_focuses(elem) {
+        function reloadFocuses(elem) {
             reload("/admin/reload_focuses", elem);
+        }
+
+        async function updateRuntimeParam(url, elem, defaultVal) {
+            let inputElem = elem.previousElementSibling;
+            let newVal = inputElem.value;
+            let response = await fetch(url, { method: "POST", body: newVal.toString() });
+            if (!response.ok) {
+                inputElem.value = defaultVal;
+            }
+        }
+
+        function updateTemplateRefresh(elem) {
+            updateRuntimeParam("/admin/update_template_refresh", elem, {{ template_refresh }});
         }
     </script>
 {%- endblock js -%}

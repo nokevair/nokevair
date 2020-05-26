@@ -26,18 +26,42 @@
     font-weight: bold;
 }
 
+.secondary-label {
+    display: inline-block;
+    margin-top: 10px;
+    text-indent: 20px;
+}
+
 .setting {
     float: right;
     color: #555;
 }
 
-.reload-button {
+.secondary-setting {
+    float: right;
+    margin-top: 10px;
+    color: #555;
+}
+
+.secondary-setting input {
+    width: 50px;
+    outline: none;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+    background-color: inherit;
+    color: inherit;
+    text-align: right;
+    border-bottom: 1px solid black;
+}
+
+.link-button {
     color: #888888;
     text-decoration: none;
     cursor: pointer;
 }
 
-.reload-button:hover {
+.link-button:hover {
     color: #555;
     text-decoration: underline;
 }

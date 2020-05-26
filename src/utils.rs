@@ -24,6 +24,12 @@ pub async fn read_body(body: hyper::Body) -> Result<Vec<u8>, hyper::Error> {
     }).await
 }
 
+/// Attempt to interpret a byte vector as a UTF-8 encoded `u32`.
+pub fn parse_u32(bytes: Vec<u8>) -> Option<u32> {
+    let s = String::from_utf8(bytes).ok()?;
+    s.parse().ok()
+}
+
 /// Join a sequence of paths together into a `PathBuf`.
 #[macro_export]
 macro_rules! path {

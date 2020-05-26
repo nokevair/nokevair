@@ -171,8 +171,13 @@ impl AppState {
             }
             [] => {
                 let mut ctx = Context::new();
+
                 ctx.insert("num_focuses", &self.lua.num_focuses(&self.ctx).await);
                 ctx.insert("num_templates", &self.num_templates());
+
+                ctx.insert("template_refresh",
+                    &self.ctx.cfg.runtime.template_refresh.load(Ordering::Relaxed));
+
                 self.render("admin/index.html", &ctx)
             }
             _ => self.error_404(),
@@ -187,13 +192,18 @@ impl AppState {
     ) -> Result<Response<Body>> {
         match path {
             ["login"] => self.login(body),
-            ["admin", path @ ..] => self.handle_admin_post_request(path).await,
+            ["admin", path @ ..] => self.handle_admin_post_request(path, body).await,
             _ => self.error_404(),
         }
     }
 
     /// Generate a response to a POST request to a path that starts with `/admin`.
-    async fn handle_admin_post_request(&self, path: &[&str]) -> Result<Response<Body>> {
+    async fn handle_admin_post_request(
+        &self,
+        path: &[&str],
+        body: Vec<u8>,
+    ) -> Result<Response<Body>> {
+        // TODO: put this behind some kind of authentication barrier
         match path {
             ["reload_templates"] => {
                 self.reload_templates();
@@ -202,6 +212,17 @@ impl AppState {
             ["reload_focuses"] => {
                 self.lua.reload_focuses(&self.ctx).await;
                 Ok(Self::empty_200())
+            }
+            ["update_template_refresh"] => {
+                if let Some(new) = utils::parse_u32(body) {
+                    let old = self.ctx.cfg.runtime.template_refresh.swap(new, Ordering::Relaxed);
+                    if new != old {
+                        self.ctx.log.info(format_args!("changed template refresh to {}", new));
+                    }
+                    Ok(Self::empty_200())
+                } else {
+                    self.error_400()
+                }
             }
             _ => self.error_404(),
         }
