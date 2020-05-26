@@ -59,7 +59,6 @@
             <td id="log-panel">[Log]</td>
         </tr>
     </table>
-    <p><button onclick="reload_templates();">Reload Templates</button></p>
 {%- endblock content -%}
 
 {%- block js %}
