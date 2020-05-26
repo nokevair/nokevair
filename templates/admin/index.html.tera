@@ -10,18 +10,61 @@
 
 {%- block content %}
     <h1>Admin Dashboard</h1>
+    <table id="panels">
+        <tr>
+            <td id="settings-panel">
+                <section>
+                    <span class="label">Focuses:</span>
+                    <span class="setting">
+                        <span class="description">
+                            <span class="num-loaded">#</span>
+                            loaded
+                            <span class="reload-button" onclick="reload_focuses(this)">(reload)</span>
+                        </span>
+                        <span class="description" style="display: none;">&hellip;</span>
+                    </span>
+                </section>
+                <section>
+                    <span class="label">Templates:</span>
+                    <span class="setting">
+                        <span class="description">
+                            <span class="num-loaded">#</span>
+                            loaded
+                            <span class="reload-button" onclick="reload_templates(this)">(reload)</span>
+                        </span>
+                        <span class="description" style="display: none;">&hellip;</span>
+                    </span>
+                </section>
+                <section>
+                    <span class="label">Simulation:</span>
+                </section>
+            </td>
+            <td id="log-panel">[Log]</td>
+        </tr>
+    </table>
     <p><button onclick="reload_templates();">Reload Templates</button></p>
-    <p><button onclick="reload_focuses();">Reload Focuses</button></p>
 {%- endblock content -%}
 
 {%- block js %}
     <script>
-        function reload_templates() {
-            fetch("/admin/reload_templates", { method: "POST" });
+        async function reload(url, elem) {
+            let desc = elem.parentElement;
+            let ellipsis = desc.nextElementSibling;
+            desc.style.display = "none";
+            ellipsis.style.display = "";
+
+            await fetch(url, { method: "POST" });
+
+            desc.style.display = "";
+            ellipsis.style.display = "none";
+        }
+
+        function reload_templates(elem) {
+            reload("/admin/reload_templates", elem)
         }
         
-        function reload_focuses() {
-            fetch("/admin/reload_focuses", { method: "POST" });
+        function reload_focuses(elem) {
+            reload("/admin/reload_focuses", elem);
         }
     </script>
 {%- endblock js -%}

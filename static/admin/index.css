@@ -1,4 +1,49 @@
-body {
-    /* just to test that it works */
-    background-color: red !important;
+#panels {
+    width: 100%;
+    border-spacing: 10px;
+}
+
+#panels td {
+    border: 2px solid #888;
+    border-radius: 5px;
+    padding: 0;
+    background-color: #eaefef;
+}
+
+#settings-panel {
+    width: 40%;
+}
+
+#settings-panel section {
+    padding: 10px;
+}
+
+#settings-panel section:not(:last-child) {
+    border-bottom: 2px solid #888;
+}
+
+.label {
+    font-weight: bold;
+}
+
+.setting {
+    float: right;
+    color: #555;
+}
+
+.reload-button {
+    color: #888888;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.reload-button:hover {
+    color: #555;
+    text-decoration: underline;
+}
+
+/* TODO: finish the log panel */
+#log-panel {
+    text-align: center;
+    color: #555;
 }
