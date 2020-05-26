@@ -66,6 +66,10 @@
     text-decoration: underline;
 }
 
+.monospace {
+    font-family: monospace;
+}
+
 /* TODO: finish the log panel */
 #log-panel {
     text-align: center;

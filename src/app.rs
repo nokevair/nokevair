@@ -177,6 +177,8 @@ impl AppState {
 
                 ctx.insert("template_refresh",
                     &self.ctx.cfg.runtime.template_refresh.load(Ordering::Relaxed));
+                ctx.insert("sim_rate",
+                    &self.ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed));
 
                 self.render("admin/index.html", &ctx)
             }
@@ -218,6 +220,17 @@ impl AppState {
                     let old = self.ctx.cfg.runtime.template_refresh.swap(new, Ordering::Relaxed);
                     if new != old {
                         self.ctx.log.info(format_args!("changed template refresh to {}", new));
+                    }
+                    Ok(Self::empty_200())
+                } else {
+                    self.error_400()
+                }
+            }
+            ["update_sim_rate"] => {
+                if let Some(new) = utils::parse_u32(body) {
+                    let old = self.ctx.cfg.runtime.sim_rate.swap(new, Ordering::Relaxed);
+                    if new != old {
+                        self.ctx.log.info(format_args!("changed sim rate to {}", new));
                     }
                     Ok(Self::empty_200())
                 } else {
