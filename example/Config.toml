@@ -1,5 +1,8 @@
 # The address to serve from.
 addr = "127.0.0.1:3000"
+# Delay all responses by a given number of milliseconds to simulate a
+# high-latency connection while testing locally.
+# latency = 200
 
 # Defaults for certain parameters that can be configured at runtime.
 [runtime]

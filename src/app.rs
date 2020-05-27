@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
 use serde::Deserialize;
 use tera::Context;
-use tokio::time::{Duration, Instant, interval};
+use tokio::time::{Duration, Instant, interval, delay_for};
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -104,6 +104,7 @@ impl AppState {
     /// Generate a response to the given request. Wrap the response
     /// in `Ok(_)` if it was successful, and in `Err(_)` if it was not.
     async fn try_respond(&self, req: Request<Body>) -> Result<Response<Body>> {
+        self.delay().await;
         // Return an error if we somehow get a URI that doesn't have a path.
         let (head, body) = req.into_parts();
         let uri = head.uri.into_parts();
@@ -258,6 +259,14 @@ impl AppState {
                 self.render("admin/filtered_log.html", &context)
             }
             _ => self.error_404(),
+        }
+    }
+
+    /// Simulate a connection with high latency by waiting for a number of
+    /// milliseconds specified in the config file.
+    async fn delay(&self) {
+        if let Some(latency) = self.ctx.cfg.latency {
+            delay_for(Duration::from_millis(latency as u64)).await
         }
     }
 }

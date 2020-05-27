@@ -16,6 +16,8 @@ use super::Log;
 pub struct Cfg {
     /// The `addr` field of the config file.
     pub addr: SocketAddr,
+    /// The `latency` field of the config file.
+    pub latency: Option<u16>,
     /// The `[runtime]` section of the config file.
     pub runtime: Runtime,
     /// The `[paths]` section of the config file.
