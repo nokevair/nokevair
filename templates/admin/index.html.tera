@@ -70,7 +70,7 @@
                 </div>
                 <div id="log-messages-container">
                     <div id="log-messages" style="display: none;"></div>
-                    <div id="log-error">Loading...</div>
+                    <div id="log-error"></div>
                 </div>
             </div>
         </div>
@@ -105,7 +105,7 @@
             let newVal = inputElem.value;
             let response = await fetch(url, { method: "POST", body: newVal.toString() });
             loadLog();
-            
+
             if (!response.ok) {
                 inputElem.value = defaultVal;
             }
@@ -134,23 +134,29 @@
             let messages = document.getElementById("log-messages");
             let checkboxes = settings.querySelectorAll("input[type=checkbox]");
             let body = Array.from(checkboxes).map(i => i.checked ? "y" : "n").join("");
+
+            function err(msg) {
+                errMsg.innerText = msg;
+                errMsg.style.display = "";
+                messages.style.display = "none";
+            }
+
+            err("Loading...");
+
             let response = await fetch("/admin/filter_log", { method: "POST", body });
+
             if (response.ok) {
                 let body = await response.text();
                 if (body) {
+                    messages.innerHTML = body;
                     messages.style.display = "";
                     errMsg.style.display = "none";
-                    messages.innerHTML = body;
                     makeTimestampNotes();
                 } else {
-                    messages.style.display = "none";
-                    errMsg.style.display = "";
-                    errMsg.innerText = "No messages found."
+                    err("No messages found.");
                 }
             } else {
-                messages.style.display = "none";
-                errMsg.style.display = "";
-                errMsg.innerText = "Could not load log messages.";
+                err("Could not load log messages.");
             }
         }
 
