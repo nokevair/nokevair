@@ -1,6 +1,7 @@
 //! Utilities for error/info logging.
 
-use serde::Serialize;
+use chrono::{DateTime, Utc};
+use serde::{Serialize, Serializer};
 
 use std::fmt::Display;
 use std::sync::{RwLock, PoisonError};
@@ -26,8 +27,26 @@ pub struct Message {
     pub kind: MessageKind,
     /// Has the admin already marked this message as deleted?
     pub is_deleted: bool,
-    /// The content of the message
+    /// The content of the message.
     pub body: String,
+    /// The time when the message was created.
+    #[serde(serialize_with = "format_time")]
+    pub time: DateTime<Utc>,
+}
+
+fn format_time<S: Serializer>(time: &DateTime<Utc>, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_i64(time.timestamp())
+}
+
+impl Message {
+    pub fn new(kind: MessageKind, body: String) -> Self {
+        Self {
+            kind,
+            is_deleted: false,
+            body,
+            time: Utc::now(),
+        }
+    }
 }
 
 /// Keeps track of all messages written to the log.
@@ -55,33 +74,21 @@ impl Log {
     pub fn err<M: Display>(&self, msg: M) {
         let body = format!("{}", msg);
         eprintln!("\x1b[1;31merror: \x1b[39;49m{}", body);
-        self.add_message(Message {
-            kind: MessageKind::Error,
-            is_deleted: false,
-            body,
-        });
+        self.add_message(Message::new(MessageKind::Error, body));
     }
 
     /// Add an info message to the log.
     pub fn info<M: Display>(&self, msg: M) {
         let body = format!("{}", msg);
         eprintln!("\x1b[1;33minfo: \x1b[39;49m{}", body);
-        self.add_message(Message {
-            kind: MessageKind::Info,
-            is_deleted: false,
-            body,
-        });
+        self.add_message(Message::new(MessageKind::Info, body));
     }
 
     /// Add a status message to the log.
     pub fn status<M: Display>(&self, msg: M) {
         let body = format!("{}", msg);
         eprintln!("\x1b[1;32mstatus: \x1b[39;49m{}", body);
-        self.add_message(Message {
-            kind: MessageKind::Status,
-            is_deleted: false,
-            body,
-        });
+        self.add_message(Message::new(MessageKind::Status, body));
     }
     
     /// Call a function on each message in order opposite to when they were created.

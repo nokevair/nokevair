@@ -116,21 +116,29 @@
             updateRuntimeParam("/admin/update_sim_rate", elem, {{ sim_rate }});
         }
 
+        function makeTimestampNotes() {
+            for (let elem of document.getElementsByClassName("log-message")) {
+                let timestamp = parseInt(elem.dataset.timestamp, 10);
+                let date = new Date(timestamp);
+                elem.title = date.toLocaleString();
+                elem.innerHTML = `[${date.toLocaleTimeString()}] ${elem.innerHTML}`;
+            }
+        }
+
         async function loadLog() {
             let settings = document.getElementById("log-settings");
             let errMsg = document.getElementById("log-error");
             let messages = document.getElementById("log-messages");
             let checkboxes = settings.querySelectorAll("input[type=checkbox]");
             let body = Array.from(checkboxes).map(i => i.checked ? "y" : "n").join("");
-            console.log(body);
             let response = await fetch("/admin/filter_log", { method: "POST", body });
             if (response.ok) {
                 let body = await response.text();
-                console.log("body: '", body, "'");
                 if (body) {
                     messages.style.display = "";
                     errMsg.style.display = "none";
                     messages.innerHTML = body;
+                    makeTimestampNotes();
                 } else {
                     messages.style.display = "none";
                     errMsg.style.display = "";
