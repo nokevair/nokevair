@@ -9,52 +9,66 @@ use std::sync::PoisonError;
 
 use super::{Result, Ctx};
 
-/// Return a `Tera` instance containing all templates used by the application.
-pub fn load(ctx: &Ctx) -> Tera {
-    let mut tera = Tera::default();
+/// Contains data related to rendering templates.
+pub struct Templates {
+    /// The `Tera` instance holding the templates.
+    tera: Tera,
+    /// The number of templates contained in that instance.
+    len: usize,
+}
 
-    let mut base_path: Cow<Path>;
-
-    macro_rules! register {
-        ($name:expr => $path:expr) => {{
-            if let Err(e) = tera.add_template_file(base_path.join($path), Some($name)) {
-                ctx.log.err(format_args!("could not load template '{}': {}", $name, e));
-            }
-        }}
-    }
-
-    base_path = (&*ctx.cfg.paths.templates).into();
+impl Templates {
+    /// Create a `Tera` instance containing all templates used by the application.
+    pub fn load(ctx: &Ctx) -> Self {
+        let mut tera = Tera::default();
+        let mut len = 0;
     
-    // Generic parent, defining structure for all pages
-    register!("base.html" => "base.html.tera");
-
-    // Hard-coded content pages
-    register!("about.html" => "about.html.tera");
-    register!("login.html" => "login.html.tera");
-
-    // Error messages
-    register!("400.html" => "error/400.html.tera");
-    register!("401.html" => "error/401.html.tera");
-    register!("404.html" => "error/404.html.tera");
-    register!("404_no_state.html" => "error/404_no_state.html.tera");
-    register!("500.html" => "error/500.html.tera");
-
-    // Pages accessible only to admins
-    register!("admin/index.html" => "admin/index.html.tera");
-
-    base_path = (&*ctx.cfg.paths.render).into();
-
-    // Generic parent for all pages in the renderer
-    register!("format_base.html" => "format_base.html.tera");
-
-    base_path = PathBuf::new().into();
-
-    // Add pages from the directory `/render`.
-    super::with_renderer_entries(ctx, |name, path| {
-        register!(&format!("render/{}.html", name) => path.join("format.html.tera"));
-    });
-
-    tera
+        let mut base_path: Cow<Path>;
+    
+        macro_rules! register {
+            ($name:expr => $path:expr) => {{
+                if let Err(e) = tera.add_template_file(base_path.join($path), Some($name)) {
+                    ctx.log.err(format_args!("could not load template '{}': {}", $name, e));
+                } else {
+                    len += 1;
+                }
+            }}
+        }
+    
+        base_path = (&*ctx.cfg.paths.templates).into();
+        
+        // Generic parent, defining structure for all pages
+        register!("base.html" => "base.html.tera");
+    
+        // Hard-coded content pages
+        register!("about.html" => "about.html.tera");
+        register!("login.html" => "login.html.tera");
+    
+        // Error messages
+        register!("400.html" => "error/400.html.tera");
+        register!("401.html" => "error/401.html.tera");
+        register!("404.html" => "error/404.html.tera");
+        register!("404_no_state.html" => "error/404_no_state.html.tera");
+        register!("500.html" => "error/500.html.tera");
+    
+        // Pages accessible only to admins
+        register!("admin/index.html" => "admin/index.html.tera");
+        register!("admin/filtered_log.html" => "admin/filtered_log.html.tera");
+    
+        base_path = (&*ctx.cfg.paths.render).into();
+    
+        // Generic parent for all pages in the renderer
+        register!("format_base.html" => "format_base.html.tera");
+    
+        base_path = PathBuf::new().into();
+    
+        // Add pages from the directory `/render`.
+        super::with_renderer_entries(ctx, |name, path| {
+            register!(&format!("render/{}.html", name) => path.join("format.html.tera"));
+        });
+    
+        Self { tera, len }
+    }
 }
 
 impl super::AppState {
@@ -62,7 +76,7 @@ impl super::AppState {
     pub(super) fn render(&self, name: &str, ctx: &tera::Context) -> Result<Response<Body>> {
         let templates = self.templates.read()
             .unwrap_or_else(PoisonError::into_inner);
-        match templates.render(name, ctx) {
+        match templates.tera.render(name, ctx) {
             Ok(body) => {
                 let mime = mime_guess::from_path(name).first_or_octet_stream();
                 Ok(Response::builder()
@@ -87,6 +101,13 @@ impl super::AppState {
     pub(super) fn reload_templates(&self) {
         let mut templates = self.templates.write()
             .unwrap_or_else(PoisonError::into_inner);
-        *templates = load(&self.ctx);
+        *templates = Templates::load(&self.ctx);
+    }
+
+    /// Return the number of templates that are currently loaded.
+    pub(super) fn num_templates(&self) -> usize {
+        let templates = self.templates.read()
+            .unwrap_or_else(PoisonError::into_inner);
+        templates.len
     }
 }

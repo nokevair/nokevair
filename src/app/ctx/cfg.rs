@@ -6,7 +6,7 @@ use std::env;
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicU32;
+use std::sync::{RwLock, atomic::AtomicU32};
 
 use super::Log;
 
@@ -31,6 +31,9 @@ pub struct Runtime {
     /// How frequently do we reload templates? If this is zero, then never.
     #[serde(rename="template-refresh")]
     pub template_refresh: AtomicU32,
+    /// The path to the file containing the Lua simulation code.
+    #[serde(rename="sim-file")]
+    pub sim_file: RwLock<PathBuf>,
     /// How frequently do we run the simulation? If this is zero, then never.
     #[serde(rename="sim-rate")]
     pub sim_rate: AtomicU32,

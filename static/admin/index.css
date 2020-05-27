@@ -1,4 +1,139 @@
-body {
-    /* just to test that it works */
-    background-color: red !important;
+#panels {
+    display: flex;
+}
+
+#panels>div {
+    border: 2px solid #888;
+    border-radius: 5px;
+    padding: 0;
+    background-color: #eaefef;
+    margin: 15px;
+}
+
+#settings-panel {
+    flex-basis: auto;
+    width: 40%;
+    height: 500px;
+}
+
+#settings-panel section {
+    padding: 10px;
+}
+
+#settings-panel section:not(:last-child) {
+    border-bottom: 2px solid #888;
+}
+
+.label {
+    font-weight: bold;
+}
+
+.secondary-label {
+    display: inline-block;
+    margin-top: 10px;
+    text-indent: 20px;
+}
+
+.setting {
+    float: right;
+    color: #555;
+}
+
+.secondary-setting {
+    float: right;
+    margin-top: 10px;
+    color: #555;
+}
+
+.secondary-setting input {
+    width: 70px;
+    outline: none;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+    background-color: inherit;
+    color: inherit;
+    text-align: right;
+    border-bottom: 1px solid #555;
+}
+
+.link-button {
+    color: #888888;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.link-button:hover {
+    color: #555;
+    text-decoration: underline;
+}
+
+.monospace {
+    font-family: monospace;
+}
+
+#log-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+#log-header {
+    text-align: center;
+    font-weight: bold;
+    padding: 10px;
+    border-bottom: 2px solid #888;
+}
+
+#log-body {
+    flex-grow: 1;
+    display: flex;
+    height: 0px; /* ugly hack */
+}
+
+#log-settings {
+    color: #555;
+    flex-basis: auto;
+    width: 100px;
+    border-right: 2px solid #888;
+    padding: 5px;
+    box-sizing: border-box;
+}
+
+#log-reload-button {
+    text-align: center;
+    margin-top: 10px;
+}
+
+#log-messages-container {
+    flex-grow: 1;
+    overflow: scroll;
+    height: 100%;
+    width: 0px; /* ugly hack */
+}
+
+.log-message {
+    padding: 3px;
+    font-family: monospace;
+}
+
+.log-message.error {
+    background-color: #d37d7d;
+    border-bottom: 2px solid #8d4f4f;
+}
+
+.log-message.info {
+    background-color: #d3cd7d;
+    border-bottom: 2px solid #878d4f;
+}
+
+.log-message.status {
+    background-color: #7dd37d;
+    border-bottom: 2px solid #4f8d4f;
+}
+
+#log-error {
+    text-align: center;
+    color: #888;
+    margin-top: 20px;
 }

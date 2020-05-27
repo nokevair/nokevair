@@ -16,8 +16,8 @@
 //! instance every time.
 
 use std::fs::{self, File};
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock, PoisonError};
+use std::mem;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -27,19 +27,14 @@ use super::{Ctx, Version};
 
 /// Stores config info for the simulation.
 pub struct Sim {
-    /// The path to the file containing the Lua simulation code.
-    file: RwLock<Option<PathBuf>>,
     /// Used to let the previously-created simulation thread know that it should exit.
     cancel_previous: Mutex<Arc<AtomicBool>>, // TODO: arc_swap?
 }
 
 impl Sim {
     /// Create the initial version of the simulation state.
-    pub fn new(ctx: &Ctx) -> Self {
+    pub fn new() -> Self {
         Self {
-            // TODO: change this to RwLock::default and make it configurable
-            // in the admin panel
-            file: RwLock::new(Some(ctx.cfg.paths.sim.join("0.lua"))),
             // This is a dummy value and will be discarded after the
             // first simulation starts.
             cancel_previous: Mutex::default(),
@@ -60,15 +55,12 @@ impl Sim {
         };
 
         // Get the path of the simulation file
-        let lua_file = self.file.read()
+        let lua_file_guard = app_ctx.cfg.runtime.sim_file.read()
             .unwrap_or_else(PoisonError::into_inner);
-        let lua_file = match &*lua_file {
-            Some(f) => f.to_string_lossy().into_owned(),
-            None => {
-                app_ctx.log.status("no simulation file specified");
-                return
-            }
-        };
+        let lua_file = app_ctx.cfg.paths.sim.join(&*lua_file_guard);
+        let lua_file_string = lua_file.display().to_string();
+
+        mem::drop(lua_file_guard);
 
         let time_limit = Duration::from_secs(
             app_ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed) as u64);
@@ -152,7 +144,7 @@ impl Sim {
                         Err(e) => {
                             app_ctx.log.err(format_args!(
                                 "could not read simulation code in '{}': {}",
-                                lua_file,
+                                lua_file_string,
                                 e
                             ));
                             return Ok(())
@@ -161,11 +153,11 @@ impl Sim {
 
                     // Evaluate the Lua code to get a function.
                     let sim_fn = ctx.load(&sim_code)
-                        .set_name(&lua_file)?
+                        .set_name(&lua_file_string)?
                         .eval::<rlua::Function>()?;
                     
                     // Apply this function to the state to get the new state.
-                    let new_state = sim_fn.call::<_, LV>((current_state, lua_file))?;
+                    let new_state = sim_fn.call::<_, LV>((current_state, lua_file_string))?;
 
                     // Convert this state back into a MessagePack object.
                     let mpv = conv::lua_to_msgpack(new_state)?;

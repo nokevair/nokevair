@@ -10,18 +10,160 @@
 
 {%- block content %}
     <h1>Admin Dashboard</h1>
-    <p><button onclick="reload_templates();">Reload Templates</button></p>
-    <p><button onclick="reload_focuses();">Reload Focuses</button></p>
+    <div id="panels">
+        <div id="settings-panel">
+            <section>
+                <span class="label">Focuses:</span>
+                <span class="setting">
+                    <span class="description">
+                        {{ num_focuses }} loaded
+                        <span class="link-button" onclick="reloadFocuses(this)">(reload)</span>
+                    </span>
+                    <span class="description" style="display: none;">&hellip;</span>
+                </span>
+            </section>
+            <section>
+                <span class="label">Templates:</span>
+                <span class="setting">
+                    <span class="description">
+                        {{ num_templates }} loaded
+                        <span class="link-button" onclick="reloadTemplates(this)">(reload)</span>
+                    </span>
+                    <span class="description" style="display: none;">&hellip;</span>
+                </span>
+                <br />
+                <span class="secondary-label">Auto-reload:</span>
+                <span class="secondary-setting">
+                    <input autocomplete="off" type="number" min="0" value="{{ template_refresh }}" /> secs
+                    <span class="link-button" onclick="updateTemplateRefresh(this);">(update)</span>
+                </span>
+            </section>
+            <section>
+                <span class="label">Simulation:</span>
+                <span class="setting">
+                    <span class="monospace">{{ sim_file }}</span>
+                    <span class="link-button">(change)</span>
+                </span>
+                <br />
+                <span class="secondary-label">Auto-run:</span>
+                <span class="secondary-setting">
+                    <input autocomplete="off" type="number" min="0" value="{{ sim_rate }}" /> secs
+                    <span class="link-button" onclick="updateSimRate(this);">(update)</span>
+                </span>
+            </section>
+            <section>
+                <span class="label">States:</span>
+                <span class="setting">
+                    {{ num_states }} loaded
+                    <span class="link-button">(explore)</span>
+            </section>
+            <section>
+                <span class="label">Server Uptime:</span>
+                <span class="setting">{{ uptime }} secs</span>
+            </section>
+        </div>
+        <div id="log-panel">
+            <div id="log-header">Log</div>
+            <div id="log-body">
+                <div id="log-settings">
+                    <div><input type="checkbox" autocomplete="off" checked="true" /> error</div>
+                    <div><input type="checkbox" autocomplete="off" checked="true" /> info</div>
+                    <div><input type="checkbox" autocomplete="off" checked="true" /> status</div>
+                    <div><input type="checkbox" autocomplete="off" /> deleted</div>
+                    <div id="log-reload-button" class="link-button" onclick="loadLog();">(reload)</div>
+                </div>
+                <div id="log-messages-container">
+                    <div id="log-messages" style="display: none;"></div>
+                    <div id="log-error"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 {%- endblock content -%}
 
 {%- block js %}
     <script>
-        function reload_templates() {
-            fetch("/admin/reload_templates", { method: "POST" });
+        async function reload(url, elem) {
+            let desc = elem.parentElement;
+            let ellipsis = desc.nextElementSibling;
+            desc.style.display = "none";
+            ellipsis.style.display = "";
+
+            await fetch(url, { method: "POST" });
+            loadLog();
+
+            desc.style.display = "";
+            ellipsis.style.display = "none";
+        }
+
+        function reloadTemplates(elem) {
+            reload("/admin/reload_templates", elem)
         }
         
-        function reload_focuses() {
-            fetch("/admin/reload_focuses", { method: "POST" });
+        function reloadFocuses(elem) {
+            reload("/admin/reload_focuses", elem);
         }
+
+        async function updateRuntimeParam(url, elem, defaultVal) {
+            let inputElem = elem.previousElementSibling;
+            let newVal = inputElem.value;
+            let response = await fetch(url, { method: "POST", body: newVal.toString() });
+            loadLog();
+
+            if (!response.ok) {
+                inputElem.value = defaultVal;
+            }
+        }
+
+        function updateTemplateRefresh(elem) {
+            updateRuntimeParam("/admin/update_template_refresh", elem, {{ template_refresh }});
+        }
+
+        function updateSimRate(elem) {
+            updateRuntimeParam("/admin/update_sim_rate", elem, {{ sim_rate }});
+        }
+
+        function makeTimestampNotes() {
+            for (let elem of document.getElementsByClassName("log-message")) {
+                let timestamp = parseInt(elem.dataset.timestamp, 10);
+                let date = new Date(timestamp);
+                elem.title = date.toLocaleString();
+                elem.innerHTML = `[${date.toLocaleTimeString()}] ${elem.innerHTML}`;
+            }
+        }
+
+        async function loadLog() {
+            let settings = document.getElementById("log-settings");
+            let errMsg = document.getElementById("log-error");
+            let messages = document.getElementById("log-messages");
+            let checkboxes = settings.querySelectorAll("input[type=checkbox]");
+            let body = Array.from(checkboxes).map(i => i.checked ? "y" : "n").join("");
+
+            function err(msg) {
+                errMsg.innerText = msg;
+                errMsg.style.display = "";
+                messages.style.display = "none";
+            }
+
+            err("Loading...");
+
+            let response = await fetch("/admin/filter_log", { method: "POST", body });
+
+            if (response.ok) {
+                let body = await response.text();
+                if (body) {
+                    messages.innerHTML = body;
+                    messages.style.display = "";
+                    errMsg.style.display = "none";
+                    makeTimestampNotes();
+                } else {
+                    err("No messages found.");
+                }
+            } else {
+                err("Could not load log messages.");
+            }
+        }
+
+        loadLog();
     </script>
 {%- endblock js -%}

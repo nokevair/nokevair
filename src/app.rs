@@ -4,19 +4,20 @@
 use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
 use serde::Deserialize;
-use tera::{Tera, Context};
+use tera::Context;
 use tokio::time::{Duration, Instant, interval};
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
 // TODO: with some performance testing, maybe switch to parking_lot?
-use std::sync::{RwLock, atomic::Ordering};
+use std::sync::{RwLock, PoisonError, atomic::Ordering};
 
 use crate::hyper_boilerplate::Respond;
 use crate::utils;
 
 mod ctx;
 pub use ctx::Ctx;
+use ctx::log;
 
 mod error;
 use error::Result;
@@ -26,15 +27,19 @@ use lua::with_renderer_entries;
 pub use lua::Backend as LuaBackend;
 use lua::Sim;
 
+mod templates;
+use templates::Templates;
+
 mod login;
 mod responses;
-mod templates;
 
 /// Contains all state used by the application in a
 /// concurrently-accessible format.
 pub struct AppState {
-    /// The `Tera` instance used to render templates.
-    templates: RwLock<Tera>,
+    /// When was the server initialized?
+    start_time: Instant,
+    /// Contains data used to render templates.
+    templates: RwLock<Templates>,
     /// Tokens used by `/login` to authenticate the user.
     login_tokens: RwLock<HashMap<u64, Instant>>,
     /// Permits interaction with the task running the Lua renderer instance.
@@ -50,10 +55,11 @@ impl AppState {
     pub fn new(ctx: Ctx) -> (LuaBackend, Self) {
         let (frontend, backend) = lua::init(&ctx);
         (backend, Self {
-            templates: RwLock::new(templates::load(&ctx)),
+            start_time: Instant::now(),
+            templates: RwLock::new(Templates::load(&ctx)),
             login_tokens: RwLock::default(),
             lua: frontend,
-            sim: Sim::new(&ctx),
+            sim: Sim::new(),
             ctx,
         })
     }
@@ -167,7 +173,23 @@ impl AppState {
                 let file_path = path!(&self.ctx.cfg.paths.static_, "admin", file);
                 self.serve_file(&file_path).await
             }
-            [] => self.render("admin/index.html", &Context::new()),
+            [] => {
+                let mut ctx = Context::new();
+
+                ctx.insert("num_focuses", &self.lua.num_focuses(&self.ctx).await);
+                ctx.insert("num_templates", &self.num_templates());
+                ctx.insert("template_refresh",
+                    &self.ctx.cfg.runtime.template_refresh.load(Ordering::Relaxed));
+                ctx.insert("sim_file",
+                    &*self.ctx.cfg.runtime.sim_file.read()
+                        .unwrap_or_else(PoisonError::into_inner));
+                ctx.insert("sim_rate",
+                    &self.ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed));
+                ctx.insert("num_states", &self.lua.num_states(&self.ctx).await);
+                ctx.insert("uptime", &self.start_time.elapsed().as_secs());
+
+                self.render("admin/index.html", &ctx)
+            }
             _ => self.error_404(),
         }
     }
@@ -180,13 +202,18 @@ impl AppState {
     ) -> Result<Response<Body>> {
         match path {
             ["login"] => self.login(body),
-            ["admin", path @ ..] => self.handle_admin_post_request(path).await,
+            ["admin", path @ ..] => self.handle_admin_post_request(path, body).await,
             _ => self.error_404(),
         }
     }
 
     /// Generate a response to a POST request to a path that starts with `/admin`.
-    async fn handle_admin_post_request(&self, path: &[&str]) -> Result<Response<Body>> {
+    async fn handle_admin_post_request(
+        &self,
+        path: &[&str],
+        body: Vec<u8>,
+    ) -> Result<Response<Body>> {
+        // TODO: put this behind some kind of authentication barrier
         match path {
             ["reload_templates"] => {
                 self.reload_templates();
@@ -195,6 +222,40 @@ impl AppState {
             ["reload_focuses"] => {
                 self.lua.reload_focuses(&self.ctx).await;
                 Ok(Self::empty_200())
+            }
+            ["update_template_refresh"] => {
+                if let Some(new) = utils::parse_u32(body) {
+                    let old = self.ctx.cfg.runtime.template_refresh.swap(new, Ordering::Relaxed);
+                    if new != old {
+                        self.ctx.log.info(format_args!("changed template refresh to {}", new));
+                    }
+                    Ok(Self::empty_200())
+                } else {
+                    self.error_400()
+                }
+            }
+            ["update_sim_rate"] => {
+                if let Some(new) = utils::parse_u32(body) {
+                    let old = self.ctx.cfg.runtime.sim_rate.swap(new, Ordering::Relaxed);
+                    if new != old {
+                        self.ctx.log.info(format_args!("changed sim rate to {}", new));
+                    }
+                    Ok(Self::empty_200())
+                } else {
+                    self.error_400()
+                }
+            }
+            ["filter_log"] => {
+                let filter = log::Filter::from_body(&body);
+                let mut messages = Vec::new();
+                self.ctx.log.for_each(|msg| {
+                    if filter.permits(msg) {
+                        messages.push(msg.clone());
+                    }
+                });
+                let mut context = Context::new();
+                context.insert("messages", &messages);
+                self.render("admin/filtered_log.html", &context)
             }
             _ => self.error_404(),
         }

@@ -5,6 +5,8 @@ addr = "127.0.0.1:3000"
 [runtime]
 # How frequently do we reload templates? If zero, then never.
 template-refresh = 4
+# From what file do we read the simulation code?
+sim-file = "0.lua"
 # How frequently do we run the simulation? If zero, then never.
 sim-rate = 15
 
