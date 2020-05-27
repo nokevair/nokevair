@@ -130,3 +130,9 @@
     background-color: #7dd37d;
     border-bottom: 2px solid #4f8d4f;
 }
+
+#log-error {
+    text-align: center;
+    color: #888;
+    margin-top: 20px;
+}

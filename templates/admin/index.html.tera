@@ -69,7 +69,8 @@
                     <div id="log-reload-button" class="link-button" onclick="loadLog();">(reload)</div>
                 </div>
                 <div id="log-messages-container">
-                    <div id="log-messages"></div>
+                    <div id="log-messages" style="display: none;"></div>
+                    <div id="log-error">Loading...</div>
                 </div>
             </div>
         </div>
@@ -117,14 +118,28 @@
 
         async function loadLog() {
             let settings = document.getElementById("log-settings");
-            let errMsg = document.getElementById("log-err-msg");
+            let errMsg = document.getElementById("log-error");
             let messages = document.getElementById("log-messages");
             let checkboxes = settings.querySelectorAll("input[type=checkbox]");
             let body = Array.from(checkboxes).map(i => i.checked ? "y" : "n").join("");
             console.log(body);
             let response = await fetch("/admin/filter_log", { method: "POST", body });
             if (response.ok) {
-                messages.innerHTML = await response.text();
+                let body = await response.text();
+                console.log("body: '", body, "'");
+                if (body) {
+                    messages.style.display = "";
+                    errMsg.style.display = "none";
+                    messages.innerHTML = body;
+                } else {
+                    messages.style.display = "none";
+                    errMsg.style.display = "";
+                    errMsg.innerText = "No messages found."
+                }
+            } else {
+                messages.style.display = "none";
+                errMsg.style.display = "";
+                errMsg.innerText = "Could not load log messages.";
             }
         }
 
