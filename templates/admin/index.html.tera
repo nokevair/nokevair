@@ -86,6 +86,7 @@
             ellipsis.style.display = "";
 
             await fetch(url, { method: "POST" });
+            loadLog();
 
             desc.style.display = "";
             ellipsis.style.display = "none";
@@ -103,6 +104,8 @@
             let inputElem = elem.previousElementSibling;
             let newVal = inputElem.value;
             let response = await fetch(url, { method: "POST", body: newVal.toString() });
+            loadLog();
+            
             if (!response.ok) {
                 inputElem.value = defaultVal;
             }
