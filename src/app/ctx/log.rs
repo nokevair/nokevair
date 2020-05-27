@@ -1,27 +1,33 @@
 //! Utilities for error/info logging.
 
+use serde::Serialize;
+
 use std::fmt::Display;
 use std::sync::{RwLock, PoisonError};
 
 /// Represents the type of a log message.
-#[derive(Clone, Copy)]
-enum MessageKind {
+#[derive(Clone, Copy, Serialize)]
+pub enum MessageKind {
     /// An error message.
+    #[serde(rename="error")]
     Error,
     /// An informational message.
+    #[serde(rename="info")]
     Info,
     /// A confirmation of a frequent/routine action.
+    #[serde(rename="status")]
     Status,
 }
 
 /// Represents a message in the log.
-struct Message {
+#[derive(Clone, Serialize)]
+pub struct Message {
     /// What kind of message is this?
-    kind: MessageKind,
+    pub kind: MessageKind,
     /// Has the admin already marked this message as deleted?
-    is_deleted: bool,
+    pub is_deleted: bool,
     /// The content of the message
-    body: String,
+    pub body: String,
 }
 
 /// Keeps track of all messages written to the log.
@@ -76,5 +82,48 @@ impl Log {
             is_deleted: false,
             body,
         });
+    }
+    
+    /// Call a function on each message in order opposite to when they were created.
+    pub fn for_each<F: FnMut(&Message)>(&self, mut f: F) {
+        let messages = self.messages.read()
+            .unwrap_or_else(PoisonError::into_inner);
+        for msg in messages.iter().rev() {
+            f(msg);
+        }
+    }
+}
+
+/// Parameters used to filter the log for certain messages.
+#[derive(Clone, Copy)]
+pub struct Filter {
+    /// Whether to keep error messages
+    error: bool,
+    /// Whether to keep info messages
+    info: bool,
+    /// Whether to keep status messages
+    status: bool,
+    /// Whether to keep deleted messages
+    deleted: bool,
+}
+
+impl Filter {
+    /// Parse this from a byte slice like b"yyyn".
+    pub fn from_body(body: &[u8]) -> Self {
+        Self {
+            error:   body.get(0) == Some(&b'y'),
+            info:    body.get(1) == Some(&b'y'),
+            status:  body.get(2) == Some(&b'y'),
+            deleted: body.get(3) == Some(&b'y'),
+        }
+    }
+
+    /// Check whether the message is permitted by the filter.
+    pub fn permits(self, msg: &Message) -> bool {
+        (self.deleted || !msg.is_deleted) && match msg.kind {
+            MessageKind::Error => self.error,
+            MessageKind::Info => self.info,
+            MessageKind::Status => self.status,
+        }
     }
 }

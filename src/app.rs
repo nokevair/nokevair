@@ -17,6 +17,7 @@ use crate::utils;
 
 mod ctx;
 pub use ctx::Ctx;
+use ctx::log;
 
 mod error;
 use error::Result;
@@ -242,6 +243,18 @@ impl AppState {
                 } else {
                     self.error_400()
                 }
+            }
+            ["filter_log"] => {
+                let filter = log::Filter::from_body(&body);
+                let mut messages = Vec::new();
+                self.ctx.log.for_each(|msg| {
+                    if filter.permits(msg) {
+                        messages.push(msg.clone());
+                    }
+                });
+                let mut context = Context::new();
+                context.insert("messages", &messages);
+                self.render("admin/filtered_log.html", &context)
             }
             _ => self.error_404(),
         }

@@ -66,14 +66,10 @@
                     <div><input type="checkbox" autocomplete="off" checked="true" /> info</div>
                     <div><input type="checkbox" autocomplete="off" checked="true" /> status</div>
                     <div><input type="checkbox" autocomplete="off" /> deleted</div>
-                    <div id="log-reload-button" class="link-button">(reload)</div>
+                    <div id="log-reload-button" class="link-button" onclick="loadLog();">(reload)</div>
                 </div>
                 <div id="log-messages-container">
-                    <div id="log-messages">
-                        <div class="log-message err">Error</div>
-                        <div class="log-message info">Info</div>
-                        <div class="log-message status">Status</div>
-                    </div>
+                    <div id="log-messages"></div>
                 </div>
             </div>
         </div>
@@ -118,5 +114,20 @@
         function updateSimRate(elem) {
             updateRuntimeParam("/admin/update_sim_rate", elem, {{ sim_rate }});
         }
+
+        async function loadLog() {
+            let settings = document.getElementById("log-settings");
+            let errMsg = document.getElementById("log-err-msg");
+            let messages = document.getElementById("log-messages");
+            let checkboxes = settings.querySelectorAll("input[type=checkbox]");
+            let body = Array.from(checkboxes).map(i => i.checked ? "y" : "n").join("");
+            console.log(body);
+            let response = await fetch("/admin/filter_log", { method: "POST", body });
+            if (response.ok) {
+                messages.innerHTML = await response.text();
+            }
+        }
+
+        loadLog();
     </script>
 {%- endblock js -%}

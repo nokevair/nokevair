@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-mod log;
+pub mod log;
 pub use log::Log;
 
 mod cfg;

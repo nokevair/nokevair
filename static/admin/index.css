@@ -106,16 +106,17 @@
 
 #log-messages-container {
     flex-grow: 1;
-    flex: 1;
     overflow: scroll;
     height: 100%;
+    width: 0px; /* ugly hack */
 }
 
 .log-message {
     padding: 3px;
+    font-family: monospace;
 }
 
-.log-message.err {
+.log-message.error {
     background-color: #d37d7d;
     border-bottom: 2px solid #8d4f4f;
 }
