@@ -34,11 +34,13 @@ pub struct Message {
     pub time: DateTime<Utc>,
 }
 
+/// Deserialize a `DateTime` by representing it with a timestamp.
 fn format_time<S: Serializer>(time: &DateTime<Utc>, s: S) -> Result<S::Ok, S::Error> {
     s.serialize_i64(time.timestamp())
 }
 
 impl Message {
+    /// Create a new message with specified content.
     pub fn new(kind: MessageKind, body: String) -> Self {
         Self {
             kind,
