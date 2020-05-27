@@ -54,6 +54,13 @@
                 </span>
             </section>
             <section>
+                <span class="label">States:</span>
+                <span class="setting">
+                    <span class="num-loaded">{{ num_states }}</span>
+                    loaded
+                    <span class="link-button">(explore)</span>
+            </section>
+            <section>
                 <span class="label">Server Uptime:</span>
                 <span class="setting">{{ uptime }} secs</span>
             </section>

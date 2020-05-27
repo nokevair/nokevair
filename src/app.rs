@@ -185,6 +185,7 @@ impl AppState {
                         .unwrap_or_else(PoisonError::into_inner));
                 ctx.insert("sim_rate",
                     &self.ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed));
+                ctx.insert("num_states", &self.lua.num_states(&self.ctx).await);
                 ctx.insert("uptime", &self.start_time.elapsed().as_secs());
 
                 self.render("admin/index.html", &ctx)

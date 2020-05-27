@@ -85,6 +85,12 @@ enum Req {
         /// The channel over which to send a response.
         resp_tx: oneshot::Sender<usize>,
     },
+    /// A request to return the number of states that have been loaded.
+    /// Expects a `usize` as a response.
+    GetNumStates {
+        /// The channel over which to send a response.
+        resp_tx: oneshot::Sender<usize>,
+    }
 }
 
 /// The sending half of the request channel.
@@ -155,21 +161,31 @@ impl Frontend {
                 if self.tx.clone().send(req).await.is_err() {
                     ctx.log.err("backend is not running");
                     0
+                } else if let Ok(n) = resp_rx.await {
+                    let mut cache = self.num_focuses.write()
+                        .unwrap_or_else(PoisonError::into_inner);
+                    *cache = Some(n);
+                    n
                 } else {
-                    match resp_rx.await {
-                        Ok(n) => {
-                            let mut cache = self.num_focuses.write()
-                                .unwrap_or_else(PoisonError::into_inner);
-                            *cache = Some(n);
-                            n
-                        }
-                        Err(_) => {
-                            ctx.log.err("backend is not running");
-                            0
-                        }
-                    }
+                    ctx.log.err("backend is not running");
+                    0
                 }
             },
+        }
+    }
+
+    /// Return the number of states.
+    pub async fn num_states(&self, ctx: &Ctx) -> usize {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        let req = Req::GetNumStates { resp_tx };
+        if self.tx.clone().send(req).await.is_err() {
+            ctx.log.err("backend is not running");
+            0
+        } else if let Ok(n) = resp_rx.await {
+            n
+        } else {
+            ctx.log.err("backend is not running");
+            0
         }
     }
 }
@@ -288,6 +304,12 @@ impl Backend {
                 Req::GetNumFocuses { resp_tx } => {
                     if resp_tx.send(self.focuses.len()).is_err() {
                         app_state.ctx.log.err("couldn't send response to request for focuses");
+                    }
+                }
+
+                Req::GetNumStates { resp_tx } => {
+                    if resp_tx.send(self.state_versions.len()).is_err() {
+                        app_state.ctx.log.err("couldn't send response to request for states");
                     }
                 }
             }
