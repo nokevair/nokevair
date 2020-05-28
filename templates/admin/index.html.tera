@@ -127,7 +127,7 @@
         function makeTimestampNotes() {
             for (let elem of document.getElementsByClassName("log-message")) {
                 let timestamp = parseInt(elem.dataset.timestamp, 10);
-                let date = new Date(timestamp);
+                let date = new Date(timestamp * 1000);
                 elem.title = date.toLocaleString();
                 elem.innerHTML = `[${date.toLocaleTimeString()}] ${elem.innerHTML}`;
             }
