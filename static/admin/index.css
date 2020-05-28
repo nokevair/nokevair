@@ -115,6 +115,7 @@
 .log-message {
     padding: 3px;
     font-family: monospace;
+    white-space: pre-wrap;
 }
 
 .log-message.error {
