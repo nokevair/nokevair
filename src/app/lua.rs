@@ -56,7 +56,13 @@ fn create_lua_state(app_ctx: &Ctx) -> Lua {
                 use rand::Rng as _;
                 Ok(rand::thread_rng().gen_range(0, n))
             }
-        })
+        });
+
+        let app_ctx_clone = app_ctx.clone();
+        define_function!("log", move |_, s: String| {
+            app_ctx_clone.log.info(format_args!("lua:\n{}", s));
+            Ok(())
+        });
     });
     lua
 }

@@ -34,7 +34,7 @@ function pretty(obj)
 end
 
 return function(state, name)
-    print(pretty(state))
+    log(pretty(state))
     if state == nil then
         return {people = {}}
     else
