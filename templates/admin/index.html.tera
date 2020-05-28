@@ -69,6 +69,7 @@
                     <div><input type="checkbox" autocomplete="off" checked="true" /> error</div>
                     <div><input type="checkbox" autocomplete="off" checked="true" /> info</div>
                     <div><input type="checkbox" autocomplete="off" checked="true" /> status</div>
+                    <div><input type="checkbox" autocomplete="off" checked="true" /> lua</div>
                     <div><input type="checkbox" autocomplete="off" /> deleted</div>
                     <div id="log-reload-button" class="link-button" onclick="loadLog();">(reload)</div>
                 </div>
