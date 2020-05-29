@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::env;
 use std::fs;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{RwLock, atomic::AtomicU32};
 
 use super::Log;
@@ -86,11 +86,11 @@ impl Cfg {
     /// Load config from the TOML file passed as a command-line argument.
     pub fn load(log: &Log) -> Option<Self> {
         let mut args = env::args().skip(1);
-        let path = match args.next() {
+        let path = PathBuf::from(match args.next() {
             Some(p) => p,
             None => { log.err("no config file specified"); return None }
-        };
-        let contents = match fs::read(path) {
+        });
+        let contents = match fs::read(&path) {
             Ok(c) => c,
             Err(e) => { log.err(format_args!("while reading config file: {}", e)); return None }
         };
@@ -99,6 +99,16 @@ impl Cfg {
             Err(e) => { log.err(format_args!("while parsing config file: {}", e)); return None }
         };
         self_.security.login_password = get_admin_password(log);
+        // Change directory to the location of the config file so that `Paths` is relative to it
+        if let Some(containing_dir) = path.parent() {
+            if containing_dir != Path::new("") {
+                if let Err(e) = env::set_current_dir(containing_dir) {
+                    log.err(format_args!("could not cd to '{}': {}", containing_dir.display(), e));
+                }
+            }
+        } else {
+            log.err("impossible - config file has no parent dir");
+        }
         Some(self_)
     }
 }
