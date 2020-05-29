@@ -44,9 +44,14 @@ fn create_lua_state(app_ctx: &Ctx) -> Lua {
             }}
         }
 
-        define_function!("sleep", |_, ms: u64| {
-            thread::sleep(Duration::from_millis(ms));
+        let app_ctx_clone = app_ctx.clone();
+        define_function!("log", move |_, s: String| {
+            app_ctx_clone.log.lua(s);
             Ok(())
+        });
+
+        define_function!("pretty", move |_, v: rlua::Value| {
+            Ok(conv::lua_to_string(v))
         });
 
         define_function!("rand", |_, n: u64| {
@@ -58,9 +63,8 @@ fn create_lua_state(app_ctx: &Ctx) -> Lua {
             }
         });
 
-        let app_ctx_clone = app_ctx.clone();
-        define_function!("log", move |_, s: String| {
-            app_ctx_clone.log.lua(s);
+        define_function!("sleep", |_, ms: u64| {
+            thread::sleep(Duration::from_millis(ms));
             Ok(())
         });
     });
