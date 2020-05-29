@@ -147,7 +147,7 @@ impl AppState {
                 let file_path = path!(&self.ctx.cfg.paths.static_, "public", file);
                 self.serve_file(&file_path).await
             }
-            ["about"] => self.render("about.html", &Context::new()),
+            ["about"] => self.try_render("about.html", &Context::new()),
             ["login"] => {
                 let token = self.gen_login_token();
                 let mut context = Context::new();

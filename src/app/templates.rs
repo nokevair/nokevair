@@ -74,7 +74,15 @@ impl Templates {
 
 impl super::AppState {
     /// Render a Tera template with the provided context.
-    pub(super) fn render(&self, name: &str, ctx: &tera::Context) -> Result<Response<Body>> {
+    /// 
+    /// If `expect_present` is true, treat a missing template error as 500.
+    /// If not, treat it as a 404.
+    fn render_with_config(
+        &self,
+        name: &str,
+        ctx: &tera::Context,
+        expect_present: bool,
+    ) -> Result<Response<Body>> {
         let templates = self.templates.read()
             .unwrap_or_else(PoisonError::into_inner);
         match templates.tera.render(name, ctx) {
@@ -86,15 +94,39 @@ impl super::AppState {
                     .body(Body::from(body))
                     .unwrap())
             }
-            Err(_) if name == "500.html" => {
-                // If attempting to render the 500 page causes a 500,
-                // just return a textual error to avoid infinite recursion.
-                self.ctx.log.err("recursive 500");
-                Self::text_error(500,
-                    "500: while attempting to handle the error, the server encountered an error")
+            Err(e) => {
+                if !expect_present && matches!(e.kind, tera::ErrorKind::TemplateNotFound(_)) {
+                    if name == "404.html" {
+                        self.ctx.log.err("recursive 404");
+                        Self::text_error(404, "404: the 404 page was not found")
+                    } else {
+                        self.error_404()
+                    }
+                } else {
+                    if name == "500.html" {
+                        self.ctx.log.err("recursive 500");
+                        Self::text_error(500,
+                            "500: while attempting to handle the error, \
+                             the server encountered an error")
+                    } else {
+                        self.error_500(format_args!("tera:\n{}", SourceChain(e)))
+                    }
+                }
             }
-            Err(e) => self.error_500(format_args!("tera:\n{}", SourceChain(e))),
         }
+    }
+
+    /// Render a Tera template with the provided context. If the provided template does not
+    /// exist, return a 500 error.
+    pub(super) fn render(&self, name: &str, ctx: &tera::Context) -> Result<Response<Body>> {
+        self.render_with_config(name, ctx, true)
+    }
+
+    /// Render a Tera template with the provided context. If the provided template does not
+    /// exist, return a 404 error.
+    #[allow(dead_code)]
+    pub(super) fn try_render(&self, name: &str, ctx: &tera::Context) -> Result<Response<Body>> {
+        self.render_with_config(name, ctx, false)
     }
 
     /// Replace the current `Tera` instance with a new one based on the current
