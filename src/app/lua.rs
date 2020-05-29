@@ -60,7 +60,7 @@ fn create_lua_state(app_ctx: &Ctx) -> Lua {
 
         let app_ctx_clone = app_ctx.clone();
         define_function!("log", move |_, s: String| {
-            app_ctx_clone.log.lua(format_args!("{}", s));
+            app_ctx_clone.log.lua(s);
             Ok(())
         });
     });
