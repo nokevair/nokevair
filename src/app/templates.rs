@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::PoisonError;
 
 use super::{Result, Ctx};
+use super::utils::SourceChain;
 
 /// Contains data related to rendering templates.
 pub struct Templates {
@@ -28,7 +29,7 @@ impl Templates {
         macro_rules! register {
             ($name:expr => $path:expr) => {{
                 if let Err(e) = tera.add_template_file(base_path.join($path), Some($name)) {
-                    ctx.log.err(format_args!("could not load template '{}': {}", $name, e));
+                    ctx.log.err(format_args!("tera:\n{}", SourceChain(e)));
                 } else {
                     len += 1;
                 }
@@ -92,7 +93,7 @@ impl super::AppState {
                 Self::text_error(500,
                     "500: while attempting to handle the error, the server encountered an error")
             }
-            Err(e) => self.error_500(format_args!("while rendering template '{}': {}", name, e)),
+            Err(e) => self.error_500(format_args!("tera:\n{}", SourceChain(e))),
         }
     }
 

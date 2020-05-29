@@ -1,5 +1,8 @@
 //! Various utility functions.
 
+use std::error::Error;
+use std::fmt;
+
 /// Hash the input string with SHA256.
 pub fn sha256(s: &str) -> String {
     use sha2::{Sha256, digest::Digest};
@@ -38,4 +41,20 @@ macro_rules! path {
         $(path.push($parts);)*
         path
     }}
+}
+
+/// Wraps a type implementing `Error` and implements `Display` by repeatedly
+/// calling `source()` and putting each message on a separate line.
+pub struct SourceChain<E>(pub E);
+
+impl<E: Error> fmt::Display for SourceChain<E> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)?;
+        let mut source = self.0.source();
+        while let Some(e) = source {
+            write!(f, "\n{}", e)?;
+            source = e.source();
+        }
+        Ok(())
+    }
 }
