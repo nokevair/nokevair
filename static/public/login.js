@@ -4,19 +4,18 @@ function clearError() {
     passwordBox.classList.remove("wrong");
 }
 
-function submit() {
+async function submit() {
     let msg = token + ":" + passwordBox.value;
     let hash = forge_sha256(msg);
-    fetch("/login", {
+    let response = await fetch("/login", {
         method: "POST",
         body: JSON.stringify({ token, hash }),
-    }).then(response => {
-        if (response.redirected) {
-            window.location.assign(response.url);
-        } else {
-            passwordBox.classList.add("wrong");
-        }
-    })
+    });
+    if (response.redirected) {
+        window.location.assign(response.url);
+    } else {
+        passwordBox.classList.add("wrong");
+    }
 }
 
 addEventListener("keydown", function(evt) {
