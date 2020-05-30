@@ -138,8 +138,13 @@
     border-bottom: 2px solid #4f848d;
 }
 
-.log-message.deleted .message-body {
+.log-message.deleted .message-body-container {
     text-decoration: line-through;
+    color: rgba(0, 0, 0, 0.3);
+}
+
+.log-message.deleted .message-body {
+    color: black;
 }
 
 .delete-message-button {
