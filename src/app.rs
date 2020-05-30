@@ -220,6 +220,10 @@ impl AppState {
     ) -> Result<Response<Body>> {
         // TODO: put this behind some kind of authentication barrier
         match path {
+            ["reload_blog"] => {
+                self.ctx.reload_blog();
+                Ok(Self::empty_200())
+            }
             ["reload_templates"] => {
                 self.reload_templates();
                 Ok(Self::empty_200())

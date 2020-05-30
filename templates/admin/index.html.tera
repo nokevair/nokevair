@@ -13,6 +13,17 @@
     <div id="panels">
         <div id="settings-panel">
             <section>
+                <span class="label">Blog:</span>
+                <span class="setting">
+                    <span class="description">
+                        {% set num_blogs = 1 -%}
+                        {{ num_blogs }} post{{ num_blogs | pluralize }}
+                        <span class="link-button" onclick="reloadBlog(this)">(reload)</span>
+                    </span>
+                    <span class="description" style="display: none;">&hellip;</span>
+                </span>
+            </section>
+            <section>
                 <span class="label">Focuses:</span>
                 <span class="setting">
                     <span class="description">
@@ -97,8 +108,12 @@
             ellipsis.style.display = "none";
         }
 
+        function reloadBlog(elem) {
+            reload("/admin/reload_blog", elem);
+        }
+
         function reloadTemplates(elem) {
-            reload("/admin/reload_templates", elem)
+            reload("/admin/reload_templates", elem);
         }
         
         function reloadFocuses(elem) {

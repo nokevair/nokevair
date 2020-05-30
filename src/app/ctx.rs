@@ -39,4 +39,9 @@ impl Ctx {
             log: Arc::new(log),
         })
     }
+    
+    /// Convenience function to invoke `self.blog.reload` with appropriate parameters.
+    pub fn reload_blog(&self) {
+        self.blog.reload(&self.log, &self.cfg);
+    }
 }
