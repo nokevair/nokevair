@@ -22,6 +22,8 @@ impl Templates {
     /// Create a `Tera` instance containing all templates used by the application.
     pub fn load(ctx: &Ctx) -> Self {
         let mut tera = Tera::default();
+        tera.autoescape_on(vec![".html.tera"]);
+
         let mut len = 0;
     
         let mut base_path: Cow<Path>;
