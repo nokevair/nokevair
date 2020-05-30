@@ -19,7 +19,6 @@ impl super::AppState {
     /// Generate a unique token with which to challenge the client for the password.
     pub(super) fn gen_login_token(&self) -> u64 {
         let token = rand::random();
-        self.ctx.log.info(format_args!("generated token ({})", token));
         self.login_tokens.write()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(token, Instant::now());
