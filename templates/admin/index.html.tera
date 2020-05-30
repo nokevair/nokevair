@@ -139,6 +139,11 @@
             updateRuntimeParam("/admin/update_sim_rate", elem, {{ sim_rate }});
         }
 
+        async function deleteMessage(idx) {
+            await fetch("admin/delete_message", { method: "POST", body: idx.toString() });
+            await loadLog();
+        }
+
         function makeTimestampNotes() {
             for (let elem of document.getElementsByClassName("log-message")) {
                 let timestamp = parseInt(elem.dataset.timestamp, 10);

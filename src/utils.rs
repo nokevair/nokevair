@@ -2,6 +2,7 @@
 
 use std::error::Error;
 use std::fmt;
+use std::str::FromStr;
 
 /// Hash the input string with SHA256.
 pub fn sha256(s: &str) -> String {
@@ -27,8 +28,8 @@ pub async fn read_body(body: hyper::Body) -> Result<Vec<u8>, hyper::Error> {
     }).await
 }
 
-/// Attempt to interpret a byte vector as a UTF-8 encoded `u32`.
-pub fn parse_u32(bytes: Vec<u8>) -> Option<u32> {
+/// Interpret a byte vector as UTF-8 and attempt to parse it.
+pub fn parse_bytes<T: FromStr>(bytes: Vec<u8>) -> Option<T> {
     let s = String::from_utf8(bytes).ok()?;
     s.parse().ok()
 }

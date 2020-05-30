@@ -104,11 +104,23 @@ impl Log {
     }
 
     /// Call a function on each message in order opposite to when they were created.
-    pub fn for_each<F: FnMut(&Message)>(&self, mut f: F) {
+    pub fn for_each<F: FnMut(usize, &Message)>(&self, mut f: F) {
         let messages = self.messages.read()
             .unwrap_or_else(PoisonError::into_inner);
-        for msg in messages.iter().rev() {
-            f(msg);
+        for (idx, msg) in messages.iter().enumerate().rev() {
+            f(idx, msg);
+        }
+    }
+
+    /// Delete a message in the log, or undelete it if it is already deleted.
+    pub fn toggle_deleted(&self, idx: usize) {
+        let mut messages = self.messages.write()
+            .unwrap_or_else(PoisonError::into_inner);
+        if let Some(msg) = messages.get_mut(idx) {
+            msg.is_deleted = !msg.is_deleted;
+        } else {
+            std::mem::drop(messages); // don't deadlock
+            self.err("attempted to delete non-existent message")
         }
     }
 }

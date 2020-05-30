@@ -233,7 +233,7 @@ impl AppState {
                 Ok(Self::empty_200())
             }
             ["update_template_refresh"] => {
-                if let Some(new) = utils::parse_u32(body) {
+                if let Some(new) = utils::parse_bytes(body) {
                     let old = self.ctx.cfg.runtime.template_refresh.swap(new, Ordering::Relaxed);
                     if new != old {
                         self.ctx.log.info(format_args!("changed template refresh to {}", new));
@@ -244,7 +244,7 @@ impl AppState {
                 }
             }
             ["update_sim_rate"] => {
-                if let Some(new) = utils::parse_u32(body) {
+                if let Some(new) = utils::parse_bytes(body) {
                     let old = self.ctx.cfg.runtime.sim_rate.swap(new, Ordering::Relaxed);
                     if new != old {
                         self.ctx.log.info(format_args!("changed sim rate to {}", new));
@@ -254,18 +254,15 @@ impl AppState {
                     self.error_400()
                 }
             }
-            ["filter_log"] => {
-                let filter = log::Filter::from_body(&body);
-                let mut messages = Vec::new();
-                self.ctx.log.for_each(|msg| {
-                    if filter.permits(msg) {
-                        messages.push(msg.clone());
-                    }
-                });
-                let mut context = Context::new();
-                context.insert("messages", &messages);
-                self.render("admin/filtered_log.html", &context)
+            ["delete_message"] => {
+                if let Some(idx) = utils::parse_bytes(body) {
+                    self.ctx.log.toggle_deleted(idx);
+                    Ok(Self::empty_200())
+                } else {
+                    self.error_400()
+                }
             }
+            ["filter_log"] => self.serve_filter_log(&body),
             _ => self.error_404(),
         }
     }
@@ -308,6 +305,29 @@ impl AppState {
         let mut context = Context::new();
         context.insert("posts", &posts);
         self.render("blog_index.html", &context)
+    }
+
+    /// Generate a response to a POST request to the path "/admin/filter_log".
+    fn serve_filter_log(&self, body: &[u8]) -> Result<Response<Body>> {
+        /// Describes how log messages are serialized when passing them to Tera.
+        #[derive(Serialize)]
+        struct TeraLogMsg {
+            /// The index of the message in the log.
+            idx: usize,
+            /// The rest of the fields associated with messages.
+            #[serde(flatten)]
+            msg: log::Message,
+        }
+        let filter = log::Filter::from_body(body);
+        let mut messages = Vec::new();
+        self.ctx.log.for_each(|idx, msg| {
+            if filter.permits(msg) {
+                messages.push(TeraLogMsg { idx, msg: msg.clone() });
+            }
+        });
+        let mut context = Context::new();
+        context.insert("messages", &messages);
+        self.render("admin/filtered_log.html", &context)
     }
 }
 
