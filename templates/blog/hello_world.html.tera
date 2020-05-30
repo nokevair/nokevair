@@ -1,0 +1,10 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Hello World
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>We now have a blog!</h1>
+    <p>I've implemented rudimentary support to the server for reading and serving blog posts. Every day brings us closer to deployment!</p>
+{%- endblock content -%}
