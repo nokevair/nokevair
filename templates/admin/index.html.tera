@@ -77,11 +77,11 @@
             <div id="log-header">Log</div>
             <div id="log-body">
                 <div id="log-settings">
-                    <div><input type="checkbox" autocomplete="off" checked="true" /> error</div>
-                    <div><input type="checkbox" autocomplete="off" checked="true" /> info</div>
-                    <div><input type="checkbox" autocomplete="off" checked="true" /> status</div>
-                    <div><input type="checkbox" autocomplete="off" checked="true" /> lua</div>
-                    <div><input type="checkbox" autocomplete="off" /> deleted</div>
+                    <div><input type="checkbox" checked="true" /> error</div>
+                    <div><input type="checkbox" checked="true" /> info</div>
+                    <div><input type="checkbox" checked="true" /> status</div>
+                    <div><input type="checkbox" checked="true" /> lua</div>
+                    <div><input type="checkbox" /> deleted</div>
                     <div id="log-reload-button" class="link-button" onclick="loadLog();">(reload)</div>
                 </div>
                 <div id="log-messages-container">
