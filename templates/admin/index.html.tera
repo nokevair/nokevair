@@ -53,7 +53,7 @@
                 <span class="label">Simulation:</span>
                 <span class="setting">
                     <span class="monospace">{{ sim_file }}</span>
-                    <span class="link-button">(change)</span>
+                    <a class="link-button" href="/admin/sim_files">(change)</a>
                 </span>
                 <br />
                 <span class="secondary-label">Auto-run:</span>

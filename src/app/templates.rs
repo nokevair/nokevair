@@ -58,6 +58,7 @@ impl Templates {
         // Pages accessible only to admins
         register!("admin/index.html" => "admin/index.html.tera");
         register!("admin/filtered_log.html" => "admin/filtered_log.html.tera");
+        register!("admin/sim_files.html" => "admin/sim_files.html.tera");
 
         // Blog posts
         for id in ctx.blog.ids().iter() {

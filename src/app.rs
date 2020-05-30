@@ -195,6 +195,9 @@ impl AppState {
 
                 self.render("admin/index.html", &ctx)
             }
+            ["sim_files"] => {
+                self.render("admin/sim_files.html", &Context::new())
+            }
             _ => self.error_404(),
         }
     }
