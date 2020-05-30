@@ -15,6 +15,8 @@ sim-rate = 15
 
 # The paths to directories where certain files are found and stored.
 [paths]
+# Blog manifest file.
+blog = "Blog.toml"
 # Renderer files.
 render = "render"
 # Simulation files.

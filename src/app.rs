@@ -154,6 +154,10 @@ impl AppState {
                 context.insert("token", &token);
                 self.render("login.html", &context)
             }
+            // TODO: ["blog"] => { ... }
+            ["blog", id] => {
+                self.try_render(&format!("blog/{}.html", id), &Context::new())
+            }
             ["admin", path @ ..] => self.handle_admin_get_request(path).await,
             [ver, name] => if let Ok(ver) = ver.parse() {
                 self.lua.render(ver, String::from(*name), param).await

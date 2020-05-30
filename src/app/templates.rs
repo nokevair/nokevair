@@ -55,6 +55,11 @@ impl Templates {
         // Pages accessible only to admins
         register!("admin/index.html" => "admin/index.html.tera");
         register!("admin/filtered_log.html" => "admin/filtered_log.html.tera");
+
+        // Blog posts
+        for id in ctx.blog.ids().iter() {
+            register!(&format!("blog/{}.html", id) => format!("blog/{}.html.tera", id));
+        }
     
         base_path = (&*ctx.cfg.paths.render).into();
     

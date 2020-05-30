@@ -7,19 +7,24 @@
 
 use std::sync::Arc;
 
-pub mod log;
-pub use log::Log;
+mod blog;
+pub use blog::Blog;
 
 mod cfg;
 pub use cfg::Cfg;
 
+pub mod log;
+pub use log::Log;
+
 /// Provides a shared, cloneable handle to the log and config information.
 #[derive(Clone)]
 pub struct Ctx {
-    /// A handle to the log.
-    pub log: Arc<Log>,
+    /// A handle to the blog descriptor.
+    pub blog: Arc<Blog>,
     /// A handle to the app configuration.
     pub cfg: Arc<Cfg>,
+    /// A handle to the log.
+    pub log: Arc<Log>,
 }
 
 impl Ctx {
@@ -27,7 +32,9 @@ impl Ctx {
     pub fn load() -> Option<Self> {
         let log = Log::new();
         let cfg = Cfg::load(&log)?;
+        let blog = Blog::load(&log, &cfg)?;
         Some(Self {
+            blog: Arc::new(blog),
             cfg: Arc::new(cfg),
             log: Arc::new(log),
         })

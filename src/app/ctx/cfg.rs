@@ -45,6 +45,8 @@ pub struct Runtime {
 /// files are found and stored.
 #[derive(Deserialize, Debug)]
 pub struct Paths {
+    /// The TOML file describing blog posts.
+    pub blog: PathBuf,
     /// Renderer files.
     pub render: PathBuf,
     /// Simulation files.

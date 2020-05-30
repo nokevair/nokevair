@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 async-trait = "0.1.30"
+chashmap = "2.2.2"
 chrono = "0.4.11"
 hex = "0.4.2"
 hyper = "0.13.0"
