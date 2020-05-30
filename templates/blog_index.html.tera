@@ -1,0 +1,21 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Blog Posts
+{%- endblock title -%}
+
+{%- block css %}
+    <link type="text/css" rel="stylesheet" href="/static/blog_index.css" />
+{%- endblock css -%}
+
+{%- block content %}
+    <h1>Blog Posts</h1>
+    <ul id="posts">
+        {%- for post in posts -%}
+            <li>
+                {{ post.date }}:
+                <a href="/blog/{{ post.id }}">{{ post.title }}</a>
+            </li>
+        {%- endfor -%}
+    </ul>
+{%- endblock content -%}

@@ -1,0 +1,15 @@
+#posts {
+    list-style-type: none;
+    font-size: 1.3em;
+    color: #888;
+}
+
+#posts a {
+    color: #555;
+    text-decoration: none;
+}
+
+#posts a:hover {
+    color: #888;
+    text-decoration: underline;
+}

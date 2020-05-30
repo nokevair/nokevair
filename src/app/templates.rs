@@ -44,6 +44,7 @@ impl Templates {
         // Hard-coded content pages
         register!("about.html" => "about.html.tera");
         register!("login.html" => "login.html.tera");
+        register!("blog_index.html" => "blog_index.html.tera");
     
         // Error messages
         register!("400.html" => "error/400.html.tera");

@@ -3,7 +3,7 @@
 
 use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use tera::Context;
 use tokio::time::{Duration, Instant, interval, delay_for};
 
@@ -154,7 +154,7 @@ impl AppState {
                 context.insert("token", &token);
                 self.render("login.html", &context)
             }
-            // TODO: ["blog"] => { ... }
+            ["blog"] => self.serve_blog_index(),
             ["blog", id] => {
                 self.try_render(&format!("blog/{}.html", id), &Context::new())
             }
@@ -276,6 +276,38 @@ impl AppState {
         if let Some(latency) = self.ctx.cfg.latency {
             delay_for(Duration::from_millis(latency as u64)).await
         }
+    }
+
+    /// Generate a response to a GET request to the path "/blog".
+    fn serve_blog_index(&self) -> Result<Response<Body>> {
+        /// Describes how posts are serialized when passing them to Tera.
+        #[derive(Serialize)]
+        struct TeraPost {
+            /// The ID of the post.
+            id: String,
+            /// The title of the post.
+            title: String,
+            /// The date that the post was published.
+            date: String,
+        }
+        let mut posts = Vec::new();
+        for id in self.ctx.blog.ids().iter().rev() {
+            let post = match self.ctx.blog.metadata(id) {
+                Some(post) => post,
+                None => {
+                    self.ctx.log.err("impossible - bad post id");
+                    continue
+                }
+            };
+            posts.push(TeraPost {
+                id: id.to_owned(),
+                title: post.title.clone(),
+                date: post.date.clone()
+            });
+        }
+        let mut context = Context::new();
+        context.insert("posts", &posts);
+        self.render("blog_index.html", &context)
     }
 }
 
