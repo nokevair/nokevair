@@ -23,6 +23,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::conv;
+use crate::utils::SourceChain;
 use super::{Ctx, Version};
 
 /// Stores config info for the simulation.
@@ -129,8 +130,8 @@ impl Sim {
                                 Ok(lv) => lv,
                                 Err(e) => {
                                     app_ctx.log.err(format_args!(
-                                        "file could not be converted to lua object: {:?}",
-                                        e
+                                        "lua (msgpack -> obj):\n{}",
+                                        SourceChain(e)
                                     ));
                                     return Ok(())
                                 }
@@ -202,7 +203,7 @@ impl Sim {
                 });
 
                 if let Err(e) = res {
-                    app_ctx.log.err(format!("lua error during simulation: {:?}", e));
+                    app_ctx.log.err(format!("lua (sim):\n{}", SourceChain(e)));
                 }
             }).expect("failed to start simulation thread");
     }

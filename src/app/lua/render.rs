@@ -22,6 +22,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::conv;
+use crate::utils::SourceChain;
 use super::{Ctx, Version, Result, AppState};
 
 /// Apply a function to certain paths in the `render` directory
@@ -111,9 +112,9 @@ impl super::Backend {
 
             if let Err(e) = res {
                 app_ctx.log.err(format_args!(
-                    "failed to create focus from file '{}': {:?}",
+                    "lua ('{}' -> focus):\n{}",
                     path.display(),
-                    e
+                    SourceChain(e),
                 ));
             }
         });
@@ -139,7 +140,7 @@ impl super::Backend {
         macro_rules! render_call {
             () => {
                 match &query_param {
-                    Some(param) => format!("'{}' (with arg {})", name, param),
+                    Some(param) => format!("'{}' with arg '{}'", name, param),
                     None => format!("'{}'", name),
                 }
             }
@@ -165,9 +166,9 @@ impl super::Backend {
             // Apply the function to the state and query param
             let ctx: Option<rlua::Table> = focus_fn.call((state, query_param.clone()))
                 .or_else(|e| app_state.error_500(format_args!(
-                    "while executing focus fn {}: {:?}",
+                    "lua (focus {}):\n{}",
                     render_call!(),
-                    e
+                    SourceChain(e),
                 )))?;
             
             // As a special case, return 404 if the focus returns nil
@@ -176,17 +177,17 @@ impl super::Backend {
             // Convert the context from a Lua value to JSON
             let ctx = conv::lua_to_json(LV::Table(ctx))
                 .or_else(|e| app_state.error_500(format_args!(
-                    "while converting result of focus fn {} to JSON: {:?}",
+                    "lua (focus {} -> JSON):\n{}",
                     render_call!(),
-                    e
+                    SourceChain(e)
                 )))?;
             
             // Convert the JSON to a Tera context.
             let ctx = tera::Context::from_serialize(ctx)
                 .or_else(|e| app_state.error_500(format_args!(
-                    "while converting result of focus fn {} to Tera ctx: {}",
+                    "tera (focus {} -> Tera ctx):\n{}",
                     render_call!(),
-                    e
+                    SourceChain(e),
                 )))?;
                 
             // TODO: add additional variables to the context, such as what version

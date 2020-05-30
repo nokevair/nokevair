@@ -13,6 +13,7 @@ use std::thread;
 use std::time::Duration;
 
 use crate::conv;
+use crate::utils::SourceChain;
 use super::{Ctx, Result, AppState};
 
 mod render;
@@ -36,9 +37,9 @@ fn create_lua_state(app_ctx: &Ctx) -> Lua {
                     .and_then(|func| globals.set($name, func));
                 if let Err(e) = res {
                     app_ctx.log.err(format_args!(
-                        "could not create function '{}': {:?}",
+                        "lua (creating function '{}'):\n{}",
                         $name,
-                        e
+                        SourceChain(e)
                     ));
                 }
             }}
@@ -258,8 +259,8 @@ impl Backend {
                 Ok(lv) => lv,
                 Err(e) => {
                     app_ctx.log.err(format_args!(
-                        "file could not be converted to lua object: {:?}",
-                        e
+                        "lua (msgpack -> obj):\n{}",
+                        SourceChain(e)
                     ));
                     return None
                 }
@@ -269,8 +270,8 @@ impl Backend {
                 Ok(key) => Some(key),
                 Err(e) => {
                     app_ctx.log.err(format_args!(
-                        "lua object could not be added to registry: {:?}",
-                        e
+                        "lua (obj -> registry):\n{}",
+                        SourceChain(e)
                     ));
                     None
                 }
