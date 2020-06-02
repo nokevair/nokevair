@@ -133,7 +133,6 @@ impl super::AppState {
 
     /// Render a Tera template with the provided context. If the provided template does not
     /// exist, return a 404 error.
-    #[allow(dead_code)]
     pub(super) fn try_render(&self, name: &str, ctx: &tera::Context) -> Result<Response<Body>> {
         self.render_with_config(name, ctx, false)
     }
