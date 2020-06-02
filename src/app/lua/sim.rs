@@ -213,7 +213,7 @@ impl Sim {
 /// for a Lua simulation program.
 pub fn is_valid_name(name: &str) -> bool {
     if let Some(name) = utils::remove_suffix(name, ".lua") {
-        name.chars().all(|c| c.is_ascii_alphanumeric())
+        name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
     } else {
         false
     }
