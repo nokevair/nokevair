@@ -47,6 +47,10 @@ When loading the renderer, each `focus.lua` script is evaluated, and its return 
 
 The return value of this function should be a table, which is interpreted as a Tera context and passed to `format.tera` to generate the page served to the user.
 
+## Publication
+
+The driver will eventually be hosted on a dedicated website. However, simulation files will concealed, and world states will only be visible through the renderer.
+
 ## Credits
 
 The following external resources are used by this project:
