@@ -6,6 +6,7 @@
 
 {%- block css %}
     <link type="text/css" rel="stylesheet" href="/admin/static/sim_files.css" />
+    <link type="text/css" rel="stylesheet" href="/admin/static/hljs.css" />
 {%- endblock css -%}
 
 {%- block content %}
@@ -21,30 +22,34 @@
                 </ul>
             </div>
         </div>
-        <div id="code"></div>
+        <div id="code-pane"><div class="code-status">No file selected.</div></div>
     </div>
 {%- endblock content -%}
 
 {%- block js %}
+    <script src="/admin/static/hljs.js"></script>
     <script>
-        /*
+        // Maps filenames to <code> elements which may or may not be on the DOM.
         let loadedFiles = new Map();
+
         async function loadFile(name) {
             if (loadedFiles.has(name)) {
                 return loadedFiles.get(name);
             }
             let response = await fetch("/admin/sim_files/" + name);
             if (response.ok) {
-                let text = response.text();
-                loadedFiles.set(name, text);
-                return text;
+                let text = await response.text();
+                let codeElem = document.createElement("code");
+                codeElem.innerHTML = text;
+                codeElem.classList.add("lua");
+                hljs.highlightBlock(codeElem);
+                loadedFiles.set(name, codeElem);
+                return codeElem;
             } else {
                 console.error(response);
                 return null;
             }
         }
-        */
-
 
         let currentSelection = null;
         let fileList = document.getElementById("file-list");
@@ -57,7 +62,17 @@
             return getFileLi(idx).getElementsByClassName("file-name")[0].innerText;
         }
 
-        function select(idx) {
+        let codePane = document.getElementById("code-pane");
+
+        function status(msg) {
+            let statusDiv = document.createElement("div");
+            statusDiv.classList.add("code-status");
+            statusDiv.innerText = msg;
+            codePane.innerHTML = "";
+            codePane.appendChild(statusDiv);
+        }
+
+        async function select(idx) {
             // adjust the classes
             if (currentSelection !== null) {
                 getFileLi(currentSelection).classList.remove("selected");
@@ -65,7 +80,15 @@
             currentSelection = idx;
             let newLi = getFileLi(idx);
             newLi.classList.add("selected");
-            console.log(getFileName(idx));
+            let name = getFileName(idx);
+            status("Loading...");
+            let elem = await loadFile(name);
+            if (elem === null) {
+                status("The file could not be loaded.");
+            } else {
+                codePane.innerHTML = "";
+                codePane.appendChild(elem);
+            }
         }
 
         for (let i = 0; i < fileList.children.length; i++) {
@@ -75,5 +98,20 @@
                 break;
             }
         }
+
+        addEventListener("keydown", function(e) {
+            if (e.ctrlKey || e.metaKey) return;
+            if (e.key == "ArrowUp") {
+                if (currentSelection !== null && currentSelection > 0) {
+                    select(currentSelection - 1);
+                }
+                e.preventDefault();
+            } else if (e.key == "ArrowDown") {
+                if (currentSelection !== null && currentSelection < fileList.children.length - 1) {
+                    select(currentSelection + 1);
+                }
+                e.preventDefault();
+            }
+        });
     </script>
 {%- endblock js -%}

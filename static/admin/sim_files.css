@@ -52,3 +52,20 @@
     display: inline-block;
     width: 3em;
 }
+
+#code-pane {
+    flex-grow: 1;
+    display: flex;
+}
+
+.code-status {
+    text-align: center;
+    color: #888;
+    margin-top: 20px;
+    width: 100%;
+}
+
+#code-pane code {
+    white-space: pre;
+    width: 100%;
+}
