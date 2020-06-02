@@ -149,7 +149,7 @@
 
 .delete-message-button {
     float: right;
-    margin-right: 2px;
+    margin-right: 10px;
     opacity: 0.5;
     cursor: pointer;
 }
