@@ -280,6 +280,20 @@ impl AppState {
                 }
             }
             ["filter_log"] => self.serve_filter_log(&body),
+            ["update_sim_file"] => {
+                if let Ok(body) = String::from_utf8(body) {
+                    if lua::sim::is_valid_name(&body) {
+                        let mut sim_file = self.ctx.cfg.runtime.sim_file.write()
+                            .unwrap_or_else(PoisonError::into_inner);
+                        *sim_file = body.into();
+                        Ok(Self::empty_200())
+                    } else {
+                        self.error_400()
+                    }
+                } else {
+                    self.error_400()
+                }
+            }
             _ => self.error_404(),
         }
     }

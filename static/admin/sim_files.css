@@ -48,6 +48,23 @@
     background-color: #66a3bb;
 }
 
+#file-list-footer {
+    padding: 10px;
+    border-top: 2px solid #888;
+    text-align: center;
+}
+
+.link-button {
+    color: #888888;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.link-button:hover {
+    color: #555;
+    text-decoration: underline;
+}
+
 .file-select-msg {
     display: inline-block;
     width: 3em;

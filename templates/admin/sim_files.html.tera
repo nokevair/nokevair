@@ -21,6 +21,7 @@
                 {%- endfor %}
                 </ul>
             </div>
+            <div id="file-list-footer"><span class="link-button" onclick="updateSimFile()">(select)</span></div>
         </div>
         <div id="code-pane"><div class="code-status">No file selected.</div></div>
     </div>
@@ -88,6 +89,19 @@
             } else {
                 codePane.innerHTML = "";
                 codePane.appendChild(elem);
+            }
+        }
+
+        async function updateSimFile() {
+            if (currentSelection !== null) {
+                let fileName = getFileName(currentSelection);
+                let response = await fetch("/admin/update_sim_file", {
+                    method: "POST",
+                    body: fileName,
+                });
+                if (response.ok) {
+                    location.reload();
+                }
             }
         }
 
