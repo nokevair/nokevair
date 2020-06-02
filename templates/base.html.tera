@@ -27,7 +27,7 @@ No content.
             <p><a href="https://github.com/nokevair/nokevair">View the source code on GitHub.</a></p>
             <p>Reddit link.</p>
             <p>Are you an admin? <a href="/login">Log in here.</a></p>
-{%- block js %}{% endblock js %}
         </div>
+        {%- block js %}{% endblock js %}
     </body>
 </html>
