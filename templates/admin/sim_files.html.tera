@@ -4,7 +4,76 @@
     Simulation Files
 {%- endblock title -%}
 
+{%- block css %}
+    <link type="text/css" rel="stylesheet" href="/admin/static/sim_files.css" />
+{%- endblock css -%}
+
 {%- block content %}
     <h1>Simulation Files</h1>
-    <p>This page is currently unfinished.</p>
+    <div id="file-browser">
+        <div id="file-list-pane">
+            <div id="file-list-header">Files</div>
+            <div id="file-list-container">
+                <ul id="file-list">
+                {%- for file in files %}
+                    <li onclick="select({{ loop.index0 }})"><span class="file-select-msg">{% if file == active %}(*){% endif %}</span><span class="file-name">{{ file }}</span></li>
+                {%- endfor %}
+                </ul>
+            </div>
+        </div>
+        <div id="code"></div>
+    </div>
 {%- endblock content -%}
+
+{%- block js %}
+    <script>
+        /*
+        let loadedFiles = new Map();
+        async function loadFile(name) {
+            if (loadedFiles.has(name)) {
+                return loadedFiles.get(name);
+            }
+            let response = await fetch("/admin/sim_files/" + name);
+            if (response.ok) {
+                let text = response.text();
+                loadedFiles.set(name, text);
+                return text;
+            } else {
+                console.error(response);
+                return null;
+            }
+        }
+        */
+
+
+        let currentSelection = null;
+        let fileList = document.getElementById("file-list");
+
+        function getFileLi(idx) {
+            return fileList.children[idx];
+        }
+
+        function getFileName(idx) {
+            return getFileLi(idx).getElementsByClassName("file-name")[0].innerText;
+        }
+
+        function select(idx) {
+            // adjust the classes
+            if (currentSelection !== null) {
+                getFileLi(currentSelection).classList.remove("selected");
+            }
+            currentSelection = idx;
+            let newLi = getFileLi(idx);
+            newLi.classList.add("selected");
+            console.log(getFileName(idx));
+        }
+
+        for (let i = 0; i < fileList.children.length; i++) {
+            let li = fileList.children[i];
+            if (getFileName(i) == {{ active | json_encode | safe }}) {
+                select(i);
+                break;
+            }
+        }
+    </script>
+{%- endblock js -%}

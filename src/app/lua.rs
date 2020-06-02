@@ -19,8 +19,7 @@ use super::{Ctx, Result, AppState};
 mod render;
 pub use render::with_renderer_entries;
 
-mod sim;
-pub use sim::Sim;
+pub mod sim;
 
 mod version;
 pub use version::Version;

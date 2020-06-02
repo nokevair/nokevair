@@ -11,5 +11,5 @@ While the project is still in its fairly early stages, I intend to put a lot of 
 The following external resources are used by this project:
 
 - The [Carolingia](https://www.dafont.com/carolingia.font) font, used for the site logo.
+- [Highlight.js](https://highlightjs.org)'s Lua syntax highlighting and the "Atelier Dune Light" theme.
 - Brillout's [`sha256`](https://github.com/brillout/forge-sha256) implementation, used as `static/public/crypto.js`.
-

@@ -23,7 +23,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::conv;
-use crate::utils::SourceChain;
+use crate::utils::{self, SourceChain};
 use super::{Ctx, Version};
 
 /// Stores config info for the simulation.
@@ -207,4 +207,51 @@ impl Sim {
                 }
             }).expect("failed to start simulation thread");
     }
+}
+
+/// Determine whether a particular string represents a valid name
+/// for a Lua simulation program.
+pub fn is_valid_name(name: &str) -> bool {
+    if let Some(name) = utils::remove_suffix(name, ".lua") {
+        name.chars().all(|c| c.is_ascii_alphanumeric())
+    } else {
+        false
+    }
+}
+
+/// Return the names of all `*.lua` files in the sim directory.
+pub fn list_files(ctx: &Ctx) -> Vec<String> {
+    let entries = match fs::read_dir(&ctx.cfg.paths.sim) {
+        Ok(en) => en,
+        Err(e) => {
+            ctx.log.err(format_args!("failed to read sim dir: {}", e));
+            return Vec::new()
+        }
+    };
+    let mut results = Vec::new();
+    for entry in entries {
+        let entry = match entry {
+            Ok(en) => en,
+            Err(e) => {
+                ctx.log.err(format_args!("while reading sim dir: {}", e));
+                continue
+            }
+        };
+        let entry_name = entry.file_name();
+        let entry_name = match entry_name.into_string() {
+            Ok(n) => n,
+            Err(n) => {
+                ctx.log.err(format_args!(
+                    "file in sim dir had non-utf8 name: {}",
+                    n.to_string_lossy()
+                ));
+                continue
+            }
+        };
+        if is_valid_name(&entry_name) {
+            results.push(entry_name.to_owned());
+        }
+    }
+    results.sort();
+    results
 }

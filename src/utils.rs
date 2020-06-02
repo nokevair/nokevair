@@ -4,6 +4,16 @@ use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
 
+/// Remote a suffix from a string, or return `None`
+/// if it does not end with that suffix.
+pub fn remove_suffix<'a>(s: &'a str, suffix: &str) -> Option<&'a str> {
+    if s.ends_with(suffix) {
+        s.get(..s.len() - suffix.len())
+    } else {
+        None
+    }
+}
+
 /// Hash the input string with SHA256.
 pub fn sha256(s: &str) -> String {
     use sha2::{Sha256, digest::Digest};

@@ -25,7 +25,7 @@ use error::Result;
 mod lua;
 use lua::with_renderer_entries;
 pub use lua::Backend as LuaBackend;
-use lua::Sim;
+use lua::sim::Sim;
 
 mod templates;
 use templates::Templates;
@@ -196,7 +196,22 @@ impl AppState {
                 self.render("admin/index.html", &ctx)
             }
             ["sim_files"] => {
-                self.render("admin/sim_files.html", &Context::new())
+                let mut ctx = Context::new();
+
+                ctx.insert("files", &lua::sim::list_files(&self.ctx));
+                ctx.insert("active",
+                    &*self.ctx.cfg.runtime.sim_file.read()
+                        .unwrap_or_else(PoisonError::into_inner));
+
+                self.render("admin/sim_files.html", &ctx)
+            }
+            ["sim_files", name] => {
+                if lua::sim::is_valid_name(&name) {
+                    let path = self.ctx.cfg.paths.sim.join(name);
+                    self.serve_file(&path).await
+                } else {
+                    self.error_404()
+                }
             }
             _ => self.error_404(),
         }
