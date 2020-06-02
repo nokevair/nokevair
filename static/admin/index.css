@@ -110,6 +110,7 @@
     overflow: scroll;
     height: 100%;
     width: 0px; /* ugly hack */
+    background-color: #bbb;
 }
 
 .log-message {
