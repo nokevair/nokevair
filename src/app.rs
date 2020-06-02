@@ -180,6 +180,7 @@ impl AppState {
             [] => {
                 let mut ctx = Context::new();
 
+                ctx.insert("num_blogs", &self.ctx.blog.ids().len());
                 ctx.insert("num_focuses", &self.lua.num_focuses(&self.ctx).await);
                 ctx.insert("num_templates", &self.num_templates());
                 ctx.insert("template_refresh",

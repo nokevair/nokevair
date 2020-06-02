@@ -16,7 +16,6 @@
                 <span class="label">Blog:</span>
                 <span class="setting">
                     <span class="description">
-                        {% set num_blogs = 1 -%}
                         {{ num_blogs }} post{{ num_blogs | pluralize }}
                         <span class="link-button" onclick="reloadBlog(this)">(reload)</span>
                     </span>
