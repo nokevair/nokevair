@@ -30,7 +30,7 @@ use super::{Ctx, Version, Result, AppState};
 /// 
 /// When `f` is invoked, the first argument is the name of the
 /// entry, and the second is the path to its directory.
-pub fn with_renderer_entries<F: FnMut(String, PathBuf)>(app_ctx: &Ctx, mut f: F) {
+pub fn with_entries<F: FnMut(String, PathBuf)>(app_ctx: &Ctx, mut f: F) {
     // Get an iterator over the contents in the `render` directory.
     let dir = match fs::read_dir(&app_ctx.cfg.paths.render) {
         Ok(dir) => dir,
@@ -84,7 +84,7 @@ impl super::Backend {
     /// Add functions from the Lua registry and to `self.focuses` corresponding
     /// to the return values of executing `/render/*/focus.lua`.
     pub(super) fn load_focuses(&mut self, app_ctx: &Ctx) {
-        with_renderer_entries(app_ctx, |name, mut path| {
+        with_entries(app_ctx, |name, mut path| {
             // Read the file `focus.lua` inside that directory.
             path.push("focus.lua");
             let code = match fs::read_to_string(&path) {

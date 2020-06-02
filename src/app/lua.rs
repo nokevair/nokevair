@@ -16,8 +16,7 @@ use crate::conv;
 use crate::utils::SourceChain;
 use super::{Ctx, Result, AppState};
 
-mod render;
-pub use render::with_renderer_entries;
+pub mod render;
 
 pub mod sim;
 

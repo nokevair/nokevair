@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::PoisonError;
 
 use super::{Result, Ctx};
+use super::lua;
 use super::utils::SourceChain;
 
 /// Contains data related to rendering templates.
@@ -73,7 +74,7 @@ impl Templates {
         base_path = PathBuf::new().into();
     
         // Add pages from the directory `/render`.
-        super::with_renderer_entries(ctx, |name, path| {
+        lua::render::with_entries(ctx, |name, path| {
             register!(&format!("render/{}.html", name) => path.join("format.html.tera"));
         });
     
