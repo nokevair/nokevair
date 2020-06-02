@@ -2,3 +2,8 @@
 title = "We now have a blog!"
 id = "hello_world"
 date = "2020-05-29"
+
+[[posts]]
+title = "Admin controls"
+id = "admin_controls"
+date = "2020-06-02"

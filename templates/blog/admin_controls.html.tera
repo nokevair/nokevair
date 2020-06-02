@@ -1,0 +1,20 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Admin Controls
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>Admin controls</h1>
+    <p>A workable portion of the admin-specific controls is now implemented. This is includes most of what is needed to perform a variety of actions without having to restart the server:</p>
+    <ul>
+        <li>Creating blog posts</li>
+        <li>Refreshing existing page templates</li>
+        <li>Refreshing the renderer</li>
+        <li>Browsing existing simulation files and selecting one to use</li>
+        <li>Adjusting the rate at which templates are automatically refreshed</li>
+        <li>Adjusting the rate at which the simulation is performed</li>
+    </ul>
+    <p>The only major feature that's still missing is the state explorer&mdash;I want to wait until the simulation states get complicated and I can get a feel for what kind of functionality I need.</p>
+    <p>By the way, if anyone with experience in web development is interested in contributing to this project, I encourage them to do so. At the moment the site has only been tested on MacOS Chrome, Safari, and Firefox, and makes no attempt to adjust to the user's screen size responsively, because I hate web development.</p>
+{%- endblock content -%}
