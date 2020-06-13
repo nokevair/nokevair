@@ -1,0 +1,17 @@
+{%- extends "base.html" -%}
+
+{%- block title -%}
+    Improving the performance and flexibility of the design
+{%- endblock title -%}
+
+{%- block content %}
+    <h1>Improving the performance and flexibility of the design</h1>
+    <p>I've you've read <a href="https://github.com/nokevair/nokevair/blob/ccaf42ad9b36c11d6b914a483ab6589f415f644c/README.md">the README in its current form</a>, you would know that I have a very specific description and plan for how the project's focus and simulation code is going to work. In fact, this system has been implemented in its entirety, and this would have been the point where I start setting up web hosting and writing the first few iterations of the Lua code. However, now that I've thought a little more about the architecture I'm using, a number of problems have become apparent:</p>
+    <ul>
+        <li>While many objects will have the exact same keys as dozens or hundreds of others, I also expect some to have distinct differences. For example, while most characters have the same fields associated with them, I might also add specific data and functionality to certain people in order to make the plot more interesting. This makes the problem of trying to serialize the world state without redundant representation of object keys very tricky.</li>
+        <li>While most data in the world state can conceptually be divided into individual entities with specific properties, the driver is completely agnostic to this structure. This means, for example, that there isn't a generic mechanism to do something like "view all the properties associated with this entity."</li>
+        <li>While the simulation code can conceptually be divided into individual systems that govern interactions between entities, the driver is also agnostic to this structure. This means, for example, that if I wanted to disable a particular system, I would have to comment out the relevant code, hope I didn't break the syntax somehow, and then push the changes as a new version of the simulation. Ideally, this would just be a checkbox in the admin dashboard.</li>
+        <li>In its current form, the simulation and focus code are just really bad. They're hundreds of lines long, much of which consists of catching errors and writing error messages, and there's a lot of duplication. I have conversions between three different data formats that are all nearly isomorphic to JSON, and much of it is heavily coupled with the rest of the code.</li>
+    </ul>
+    <p>After taking a short break from working on Nokevair to give this problem some thought, I've come across an alternative solution which I think will solve some of these problems in a way that should ultimately makes the focus and simulation code more flexible, extensible, and performant. The new system will be implemented in a crate called <code>serial_ecs</code> and takes inspiration from existing ECS designs by giving the driver explicit knowledge about thinks like entities and systems. I hope to write more about it soon!</p>
+{%- endblock content -%}
