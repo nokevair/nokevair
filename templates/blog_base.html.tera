@@ -1,0 +1,5 @@
+{%- extends "base.html" -%}
+
+{%- block css %}
+    <link type="text/css" rel="stylesheet" href="/static/blog.css" />
+{%- endblock css -%}

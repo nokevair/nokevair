@@ -62,6 +62,7 @@ impl Templates {
         register!("admin/sim_files.html" => "admin/sim_files.html.tera");
 
         // Blog posts
+        register!("blog_base.html" => "blog_base.html.tera");
         for id in ctx.blog.ids().iter() {
             register!(&format!("blog/{}.html", id) => format!("blog/{}.html.tera", id));
         }
