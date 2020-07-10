@@ -5,8 +5,6 @@ use hyper::{Response, Body};
 use serde::Deserialize;
 use tokio::time::{Instant, Duration};
 
-use std::sync::PoisonError;
-
 use super::{Result, utils};
 
 impl super::AppState {
@@ -19,16 +17,13 @@ impl super::AppState {
     /// Generate a unique token with which to challenge the client for the password.
     pub(super) fn gen_login_token(&self) -> u64 {
         let token = rand::random();
-        self.login_tokens.write()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(token, Instant::now());
+        self.login_tokens.write().insert(token, Instant::now());
         token
     }
 
     /// Remove any login tokens that are older than the specified maximum.
     pub(super) fn clear_login_tokens(&self) {
-        let mut logins = self.login_tokens.write()
-            .unwrap_or_else(PoisonError::into_inner);
+        let mut logins = self.login_tokens.write();
         let num_logins = logins.len();
         logins.retain(|_, creation_time| creation_time.elapsed() < self.get_token_age());
         let num_cleared = num_logins - logins.len();
@@ -65,8 +60,7 @@ impl super::AppState {
             .or_else(|_| self.error_400())?;
         let token: u64 = token.parse()
             .or_else(|_| self.error_400())?;
-        let logins = self.login_tokens.read()
-            .unwrap_or_else(PoisonError::into_inner);
+        let logins = self.login_tokens.read();
         let creation_time = logins.get(&token).ok_or(())
             .or_else(|_| self.error_401())?;
         

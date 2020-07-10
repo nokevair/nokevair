@@ -5,7 +5,6 @@ use tera::Tera;
 
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
-use std::sync::PoisonError;
 
 use super::{Result, Ctx};
 use super::lua;
@@ -94,8 +93,7 @@ impl super::AppState {
         ctx: &tera::Context,
         expect_present: bool,
     ) -> Result<Response<Body>> {
-        let templates = self.templates.read()
-            .unwrap_or_else(PoisonError::into_inner);
+        let templates = self.templates.read();
         match templates.tera.render(name, ctx) {
             Ok(body) => {
                 let mime = mime_guess::from_path(name).first_or_octet_stream();
@@ -142,15 +140,11 @@ impl super::AppState {
     /// Replace the current `Tera` instance with a new one based on the current
     /// version of the template files.
     pub(super) fn reload_templates(&self) {
-        let mut templates = self.templates.write()
-            .unwrap_or_else(PoisonError::into_inner);
-        *templates = Templates::load(&self.ctx);
+        *self.templates.write() = Templates::load(&self.ctx);
     }
 
     /// Return the number of templates that are currently loaded.
     pub(super) fn num_templates(&self) -> usize {
-        let templates = self.templates.read()
-            .unwrap_or_else(PoisonError::into_inner);
-        templates.len
+        self.templates.read().len
     }
 }

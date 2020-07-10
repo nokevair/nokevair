@@ -1,14 +1,14 @@
 //! Use `rlua` to start a Lua instance and permit other tasks to query it.
 
+use hyper::{Response, Body};
+use parking_lot::RwLock;
 use rlua::{Lua, RegistryKey};
 use tokio::sync::{mpsc, oneshot};
 use vec_map::VecMap;
-use hyper::{Response, Body};
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
-use std::sync::{RwLock, PoisonError};
 use std::thread;
 use std::time::Duration;
 
@@ -138,9 +138,7 @@ impl Frontend {
         } else {
             // The number of focuses may have changed, so we must
             // invalidate the cached value.
-            let mut num_focuses = self.num_focuses.write()
-                .unwrap_or_else(PoisonError::into_inner);
-            *num_focuses = None;
+            *self.num_focuses.write() = None;
         }
     }
 
@@ -160,8 +158,7 @@ impl Frontend {
     
     /// Return the number of focuses.
     pub async fn num_focuses(&self, ctx: &Ctx) -> usize {
-        let cached = *self.num_focuses.read()
-            .unwrap_or_else(PoisonError::into_inner);
+        let cached = *self.num_focuses.read();
         match cached {
             Some(n) => n,
             None => {
@@ -171,9 +168,7 @@ impl Frontend {
                     ctx.log.err("backend is not running");
                     0
                 } else if let Ok(n) = resp_rx.await {
-                    let mut cache = self.num_focuses.write()
-                        .unwrap_or_else(PoisonError::into_inner);
-                    *cache = Some(n);
+                    *self.num_focuses.write() = Some(n);
                     n
                 } else {
                     ctx.log.err("backend is not running");

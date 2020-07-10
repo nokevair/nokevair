@@ -16,7 +16,6 @@
 //! instance every time.
 
 use std::fs::{self, File};
-use std::mem;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
@@ -56,12 +55,8 @@ impl Sim {
         };
 
         // Get the path of the simulation file
-        let lua_file_guard = app_ctx.cfg.runtime.sim_file.read()
-            .unwrap_or_else(PoisonError::into_inner);
-        let lua_file = app_ctx.cfg.paths.sim.join(&*lua_file_guard);
+        let lua_file = app_ctx.cfg.paths.sim.join(&*app_ctx.cfg.runtime.sim_file.read());
         let lua_file_string = lua_file.display().to_string();
-
-        mem::drop(lua_file_guard);
 
         let time_limit = Duration::from_secs(
             app_ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed) as u64);

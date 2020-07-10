@@ -14,6 +14,7 @@ hex = "0.4.2"
 hyper = "0.13.0"
 hyper-staticfile = "0.5.2"
 mime_guess = "2"
+parking_lot = { version = "0.11.0", features = ["serde"] }
 rand = "0.7.3"
 rlua = "0.17.0"
 rmpv = "0.4.4"

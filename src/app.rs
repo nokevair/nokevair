@@ -3,14 +3,14 @@
 
 use async_trait::async_trait;
 use hyper::{Request, Response, Body, Method};
+use parking_lot::RwLock;
 use serde::{Serialize, Deserialize};
 use tera::Context;
 use tokio::time::{Duration, Instant, interval, delay_for};
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
-// TODO: with some performance testing, maybe switch to parking_lot?
-use std::sync::{RwLock, PoisonError, atomic::Ordering};
+use std::sync::atomic::Ordering;
 
 use crate::hyper_boilerplate::Respond;
 use crate::utils;
@@ -186,8 +186,7 @@ impl AppState {
                 ctx.insert("template_refresh",
                     &self.ctx.cfg.runtime.template_refresh.load(Ordering::Relaxed));
                 ctx.insert("sim_file",
-                    &*self.ctx.cfg.runtime.sim_file.read()
-                        .unwrap_or_else(PoisonError::into_inner));
+                    &*self.ctx.cfg.runtime.sim_file.read());
                 ctx.insert("sim_rate",
                     &self.ctx.cfg.runtime.sim_rate.load(Ordering::Relaxed));
                 ctx.insert("num_states", &self.lua.num_states(&self.ctx).await);
@@ -200,8 +199,7 @@ impl AppState {
 
                 ctx.insert("files", &lua::sim::list_files(&self.ctx));
                 ctx.insert("active",
-                    &*self.ctx.cfg.runtime.sim_file.read()
-                        .unwrap_or_else(PoisonError::into_inner));
+                    &*self.ctx.cfg.runtime.sim_file.read());
 
                 self.render("admin/sim_files.html", &ctx)
             }
@@ -284,9 +282,7 @@ impl AppState {
             ["update_sim_file"] => {
                 if let Ok(body) = String::from_utf8(body) {
                     if lua::sim::is_valid_name(&body) {
-                        let mut sim_file = self.ctx.cfg.runtime.sim_file.write()
-                            .unwrap_or_else(PoisonError::into_inner);
-                        *sim_file = body.into();
+                        *self.ctx.cfg.runtime.sim_file.write() = body.into();
                         Ok(Self::empty_200())
                     } else {
                         self.error_400()

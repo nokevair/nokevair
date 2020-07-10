@@ -1,12 +1,13 @@
 //! Defines the format of `Config.toml` files.
 
+use parking_lot::RwLock;
 use serde::Deserialize;
 
 use std::env;
 use std::fs;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::{RwLock, atomic::AtomicU32};
+use std::sync::atomic::AtomicU32;
 
 use super::Log;
 
